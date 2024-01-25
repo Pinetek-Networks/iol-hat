@@ -1,8 +1,10 @@
 # IOL HAT
 Repository for IOL HAT
 
-The Master Application is based on the i-link Stack from RT-Labs: https://github.com/rtlabs-com/i-link
+The Master Application is based on the i-link stack from RT-Labs: https://github.com/rtlabs-com/i-link
+For the i-link stack, the GPLv3 license is applied (dual license is available here).  
 The Master Application uses the library based on the i-link Stack from RT-Labs. The fork of the stack can be found here: https://github.com/Pinetek-Networks/i-link
+The Master Application is also based on the i-link stack. However, it does not use the same CMake build.
 
 # IOL HAT usage and examples
 Use the IOL HAT can be used with the binaries provided in the /bin/ folder. The libraries have been copiled with the aarch-linux toolchain for 64-bit version, and the arm-linux-gnueabihf For the 32-bit version.
