@@ -4,10 +4,10 @@ Repository for IOL HAT
 The Master Application is based on the i-link stack from RT-Labs: https://github.com/rtlabs-com/i-link
 For the i-link stack, the GPLv3 license is applied (dual license is available here).  
 The Master Application uses the library based on the i-link Stack from RT-Labs. The fork of the stack can be found here: https://github.com/Pinetek-Networks/i-link
-The Master Application is also based on the i-link stack. However, it does not use the same CMake build.
+The Master Application is also based on the i-link stack. However, it does not use the CMake build.
 
 # IOL HAT usage and examples
-Use the IOL HAT can be used with the binaries provided in the /bin/ folder. The binaries have been copiled with the aarch-linux toolchain for 64-bit version, and the arm-linux-gnueabihf for the 32-bit version.
+Use the IOL HAT can be used with the binaries provided in the /bin/ folder. The binaries have been compiled with the aarch-linux toolchain for 64-bit version, and the arm-linux-gnueabihf for the 32-bit version.
 There are two binaries per target architecture available, one for port 1+2 and one for port 3+4. Please refer to the IOL HAT manual on how to set the ports.
 
 To use the communication stacks, run the binary and communicate via the TCP protocol with throught the binary with the SDCI devices. Further information can be found in the IOL HAT datasheet on the webpage: [pinetek-networks.com/en/iol-hat](https://pinetek-networks.com/en/iol-hat/)
