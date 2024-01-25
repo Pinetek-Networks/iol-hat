@@ -16,8 +16,9 @@ To use the communication stacks, run the binary and communicate via the TCP prot
 To build the library follow these steps:
 1. Install cmake (if not already installed): `sudo apt install cmake`
 2. Clone the i-link fork in a local repository `git clone https://github.com/Pinetek-Networks/i-link`
-3. Modify the crosscompile-rpi.cmake file; change the staging directory and provide the locations of the build tools
-4. Generate Makefile:\
+3. Initialize the submodules: `git submodule update --init --recursive`  
+4. Modify the crosscompile-rpi.cmake file; change the staging directory and provide the locations of the build tools
+5. Generate Makefile:\
   `mkdir build`\
   `cmake -B build -DCMAKE_TOOLCHAIN_FILE=crosscompile-rpi.cmake`
 6. Build the application:\
