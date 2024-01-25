@@ -17,10 +17,12 @@ To build the library follow these steps:
 1. Install cmake (if not already installed): `sudo apt install cmake`
 2. Clone the i-link fork in a local repository `git clone https://github.com/Pinetek-Networks/i-link`
 3. Modify the crosscompile-rpi.cmake file; change the staging directory and provide the locations of the build tools
-4. Generate Makefile: `mkdir build`; `cmake -B build -DCMAKE_TOOLCHAIN_FILE=crosscompile-rpi.cmake
-5. Build the application:\
-  `$ cd build`\
-  `$ make`\
-  `$ make install`
+4. Generate Makefile:\
+  `mkdir build`\
+  `cmake -B build -DCMAKE_TOOLCHAIN_FILE=crosscompile-rpi.cmake`
+6. Build the application:\
+  `cd build`\
+  `make`\
+  `make install`
 
 The header files and library are then available in the staging directory as privided in crosscompile-rpi.cmake. Include them in your application to use the stack.
