@@ -13,6 +13,8 @@ There are two binaries per target architecture available, one for port 1+2 and o
 To use the communication stacks, run the binary and communicate via the TCP protocol with throught the binary with the SDCI devices. Further information can be found in the IOL HAT datasheet on the webpage: [pinetek-networks.com/en/iol-hat](https://pinetek-networks.com/en/iol-hat/)
 
 # Build the library for Linux
+The i-link library is hosted in its own repository at as a fork of the RT-Labs stack: https://github.com/Pinetek-Networks/i-link
+
 To build the library follow these steps:
 1. Install cmake (if not already installed): `sudo apt install cmake`
 2. Clone the i-link fork in a local repository `git clone https://github.com/Pinetek-Networks/i-link`
