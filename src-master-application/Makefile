@@ -30,7 +30,7 @@ ArchiveOutputSwitch    :=
 PreprocessOnlySwitch   :=-E
 ObjectsFileList        :=$(IntermediateDirectory)/ObjectsList.txt
 PCHCompileFlags        :=
-LinkOptions            :=  -g  -pthread
+LinkOptions            :=  -g  -pthread   -lrt
 IncludePath            :=  $(IncludeSwitch). $(IncludeSwitch). $(IncludeSwitch)./src/ $(IncludeSwitch)./include $(IncludeSwitch)./src/ilink $(IncludeSwitch)./src/osal 
 IncludePCH             := 
 RcIncludePath          := 
@@ -45,8 +45,8 @@ LibPath                := $(LibraryPathSwitch). $(LibraryPathSwitch)./lib/
 AR       := /usr/bin/aarch64-linux-gnu-ar rcu
 CXX      := /usr/bin/aarch64-linux-gnu-g++
 CC       := /usr/bin/aarch64-linux-gnu-gcc
-CXXFLAGS :=   -Wno-psabi  -Wall   -std=c++17 -g   -pthread  -O2 $(Preprocessors)
-CFLAGS   :=   -Wno-psabi  -Wall   -g   -pthread  -O2 $(Preprocessors)
+CXXFLAGS :=   -Wno-psabi  -Wall   -std=c++17 -g   -lrt   -pthread  -O2 $(Preprocessors)
+CFLAGS   :=   -Wno-psabi  -Wall   -g   -pthread   -lrt   -O2 $(Preprocessors)
 ASFLAGS  := 
 AS       := /usr/bin/aarch64-linux-gnu-as
 

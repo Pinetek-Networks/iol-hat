@@ -23,8 +23,8 @@ import time
 TCP_IP = '127.0.0.1'
 BUFFER_SIZE = 1024
 
-TCP_PORT1 = 14001
-TCP_PORT2 = 14002
+TCP_PORT1 = 12010
+TCP_PORT2 = 12011
 
 def power (port, status):
 
