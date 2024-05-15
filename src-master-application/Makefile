@@ -42,13 +42,13 @@ LibPath                := $(LibraryPathSwitch). $(LibraryPathSwitch)./lib/
 ## Common variables
 ## AR, CXX, CC, AS, CXXFLAGS and CFLAGS can be overridden using an environment variable
 ##
-AR       := /usr/bin/aarch64-linux-gnu-ar rcu
-CXX      := /usr/bin/aarch64-linux-gnu-g++
-CC       := /usr/bin/aarch64-linux-gnu-gcc
+AR       := ar rcu
+CXX      := g++
+CC       := gcc
 CXXFLAGS :=   -Wno-psabi  -Wall   -std=c++17 -g   -lrt   -pthread  -O2 $(Preprocessors)
 CFLAGS   :=   -Wno-psabi  -Wall   -g   -pthread   -lrt   -O2 $(Preprocessors)
 ASFLAGS  := 
-AS       := /usr/bin/aarch64-linux-gnu-as
+AS       := as
 
 
 ##
