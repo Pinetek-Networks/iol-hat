@@ -41,6 +41,25 @@ def main():
 	pos_value = 0
 	button_value = 0
 
+	try:
+		data=iolhat.read(0,58,0,1)
+		print (data)
+
+	except Exception as e:
+		print("read exception: "+e)
+		iolhat.led(0,iolhat.LED_RED)
+
+	try:
+		data=iolhat.write(0,58,0,1, b'\02') #bytes("test", 'utf-8'))
+		print (data)
+
+	except Exception as e:
+		print("read exception: "+e)
+		iolhat.led(0,iolhat.LED_RED)
+
+
+	return
+
 	# Start loop to aquire and output data
 	while True:
 		# PORT1: Read Distance sensor
@@ -70,8 +89,6 @@ def main():
 
 		except:
 			iolhat.led(0,iolhat.LED_RED)
-
-
 
 		# Print result
 		print ("button_value=",button_value, ", pos_value=", pos_value, "     ", end='\r')

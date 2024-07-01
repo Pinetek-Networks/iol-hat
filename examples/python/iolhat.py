@@ -164,6 +164,138 @@ def led (port, status):
 
 
 
+def read (port, index, subindex, length):
+	print ("read, port=",port,", index=",index,", subindex=",subindex,", length=",length)
+	return_data = ""
+
+	if (port not in [0,1,2,3]):
+		raise ValueError("Port out of range")
+
+	if(index > 0xFFFF):
+		raise ValueError("Index value too high")
+
+	if(index < 0):
+		raise ValueError("Index value too high")
+
+	if(subindex > 0xFF):
+		raise ValueError("Subindex value too high")
+
+	if(subindex < 0):
+		raise ValueError("Subindex value too high")
+
+	if (port < 2):
+		tcp_port = TCP_PORT1
+	else:
+		tcp_port = TCP_PORT2
+		port=port-2
+
+	#CMD READ = 4
+	message = struct.pack("!BBHBB",4, port, index, subindex, length);
+	s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+	try:
+		s.connect((TCP_IP, tcp_port))
+
+		s.send(message)
+		data = s.recv(BUFFER_SIZE)
+
+		data_len=len(data)
+
+		print ("received data:", data, ", len=", data_len)
+
+		#ERROR (short)
+		if (data_len == 2):
+			raw_data = struct.unpack("!BB", data)
+			print (f"Parameter read error; error=", int (raw_data[1]))
+
+		#ERROR (long)
+		elif (data_len == 4):
+			raw_data = struct.unpack("!BBH", data)
+			print (f"Parameter read error; error=", int (raw_data[1]), int (raw_data[2:3]))
+
+		else:
+			#print (f"Read: port={port}, status={status}")
+			return_data = data[6:]
+
+	except Exception as e:
+		print (f"Parameter read error, exception:", e)
+
+
+	
+	finally:
+		s.close()
+		return return_data
+
+	## Give some time to prevent overload
+	time.sleep(4/1000)
+
+
+def write (port, index, subindex, length, writeData):
+	print ("read, port=",port,", index=",index,", subindex=",subindex,", length=",length, ", writeData=", writeData)
+	return_data = ""
+
+	if (port not in [0,1,2,3]):
+		raise ValueError("Port out of range")
+
+	if(index > 0xFFFF):
+		raise ValueError("Index value too high")
+
+	if(index < 0):
+		raise ValueError("Index value too high")
+
+	if(subindex > 0xFF):
+		raise ValueError("Subindex value too high")
+
+	if(subindex < 0):
+		raise ValueError("Subindex value too high")
+
+	if (port < 2):
+		tcp_port = TCP_PORT1
+	else:
+		tcp_port = TCP_PORT2
+		port=port-2
+
+	#CMD WRITE = 5
+	message = struct.pack("!BBHBB%ds" % len(writeData),5, port, index, subindex, length, writeData)
+
+	print (message)
+	s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+	try:
+		s.connect((TCP_IP, tcp_port))
+
+		s.send(message)
+		data = s.recv(BUFFER_SIZE)
+
+		data_len=len(data)
+
+		print ("received data:", data, ", len=", data_len)
+
+		#ERROR (short)
+		if (data_len == 2):
+			raw_data = struct.unpack("!BB", data)
+			print (f"Parameter write error; error=", int (raw_data[1]))
+
+		#ERROR (long)
+		elif (data_len == 4):
+			raw_data = struct.unpack("!BBH", data)
+			print (f"Parameter write error; error=", int (raw_data[1]), int (raw_data[2]))
+
+		else:
+			return_data = data[6:]
+
+	except Exception as e:
+		print (f"Parameter write error, exception:", e)
+
+
+	
+	finally:
+		s.close()
+		return return_data
+
+	## Give some time to prevent overload
+	time.sleep(4/1000)
+
 
 
 
