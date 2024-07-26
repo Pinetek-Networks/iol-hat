@@ -177,6 +177,40 @@ void * irq_thread (void * arg)
 
 static pthread_t thread;
 
+
+uint8_t getRpiType()
+{
+	 FILE *fp;
+    char model[256];
+
+    fp = fopen("/proc/device-tree/model", "r");
+    if (fp == NULL) {
+        perror("Error opening /proc/device-tree/model");
+        return 0;
+    }
+
+    if (fgets(model, sizeof(model), fp) == NULL) {
+        perror("Error reading model info");
+        fclose(fp);
+        return 0;
+    }
+
+    fclose(fp);
+
+    if (strstr(model, "Raspberry Pi 4") != NULL) {
+        printf("Running on Raspberry Pi 4\n");
+				return 4;
+    } else if (strstr(model, "Raspberry Pi 5") != NULL) {
+        printf("Running on Raspberry Pi 5\n");
+				return 5;
+    } else {
+        printf("Running on an unknown model: %s\n", model);
+				
+    }
+
+    return 0;
+}
+
 pthread_t * setup_int (unsigned int gpio_pin, isr_func_t isr_func, int spi_fd)
 {
    pthread_attr_t attr;
@@ -203,9 +237,19 @@ pthread_t * setup_int (unsigned int gpio_pin, isr_func_t isr_func, int spi_fd)
 */
 
 	//-- GPIO NEW
+	
+	// Raspberry Pi 5 uses gpiochip4
 
-	int ret;
-	chip = gpiod_chip_open("/dev/gpiochip0");
+	if (getRpiType() == 5)
+	{
+		chip = gpiod_chip_open("/dev/gpiochip4");
+	}
+	
+	else
+	{
+		chip = gpiod_chip_open("/dev/gpiochip0");
+	}
+		
 	if (!chip)
    {
       perror ("gpiod_chip_open");
@@ -219,6 +263,7 @@ pthread_t * setup_int (unsigned int gpio_pin, isr_func_t isr_func, int spi_fd)
 		return NULL;
 	}
 	
+	int ret;	
 	ret = gpiod_line_request_falling_edge_events(line, CONSUMER);
 	if (ret < 0) {
 		perror("Request event notification failed\n");

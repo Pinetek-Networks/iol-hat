@@ -44,6 +44,7 @@ void *runServer (void *_arg)
 	struct sockaddr_in address;
 	int addrlen = sizeof(address);
 	uint8_t buffer[1024] = { 0 };
+	uint8_t dataBuffer[1024] = { 0 };
 	
 	int *ioLinkFd = (int*) _arg;
 	
@@ -345,19 +346,28 @@ void *runServer (void *_arg)
 					
 					uint16_t index = ((uint16_t) buffer [2] << 8) | buffer [3];
 					uint8_t subindex = buffer[4];
-					uint8_t lenOut = buffer[5];			
+					uint8_t lenOut = buffer[5];
+					
+					
+					memcpy(dataBuffer, &buffer[6], lenOut );
 						
 					LOG_DEBUG (LOG_STATE_ON, "CMD_WRITE i%d s%d l%d\n", index, subindex, lenOut);
 					
-					iolink_smi_errortypes_t myError = do_smi_device_write(app_port, index, subindex, lenOut, &buffer[6]) ;
+					for (int i=0; i<lenOut; i++)
+					{
+						LOG_DEBUG(LOG_STATE_ON, "data[%d]=%02X\n", i, buffer[6+i]);
+					}
+					
+					iolink_smi_errortypes_t myError = do_smi_device_write(app_port, index, subindex, lenOut, dataBuffer) ;
 
 					if (myError!= IOLINK_SMI_ERRORTYPE_NONE) {
-						LOG_WARNING(LOG_STATE_ON, "%s: Failed to write on port %u\n", __func__, app_port->portnumber);
+						LOG_WARNING(LOG_STATE_ON, "%s: Failed to write on port %u, error = %u\n", __func__, app_port->portnumber, myError);
 						
 						uint8_t myErrorMessage[] = {RET_ERROR, RET_ERROR_INTERNAL, 0, 0};
 						
 						myErrorMessage[2] = (myError>>8) & 0xFF;
 						myErrorMessage[3] = myError & 0xFF;
+						send(newSocket, myErrorMessage, 4, 0);
 						break;
 					}
 					
