@@ -3,7 +3,7 @@ This Master Application is based on the i-link stack from RT-Labs: https://githu
 For the i-link stack, the GPLv3 license is applied (dual license is available here). The fork of the stack can be found here: https://github.com/Pinetek-Networks/i-link
 
 # Info
-- The Master Application does not use the original CMake build
+- The Master Application does not use the original i-link CMake build
 - Modifications in the source files are marked with comments
 - Additional files (e.g., the TCP server) have been created. Those are not seperately marked
 
