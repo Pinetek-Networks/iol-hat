@@ -1,7 +1,7 @@
 # IOL HAT
 Repository for IOL HAT
 
-![image](https://github.com/Pinetek-Networks/iol-hat/assets/116767503/9132dac7-b8c2-4d44-91c0-e09cfc75237d)
+![IOL HAT RPi (600 x 400 px)](https://github.com/user-attachments/assets/e64add7d-45a9-483a-b5c1-e328c57330e8)
 
 # IOL HAT Overview
 The IOL HAT provides IO-Link (SDCI) connectivity for Raspberry Pi and other single board computers. The IOL HAT consists of a software part ("Master Application") and a hardware based on the MAX14819. 
