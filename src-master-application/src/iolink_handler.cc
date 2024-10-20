@@ -21,7 +21,7 @@
 #include "iolink_main.h"
 #include "iolink_dl.h"
 #include "iolink_handler.h"
-#include "iolink_ifm.h"
+#include "iolink_port.h"
 #include <stdlib.h>
 
 // --- MACORS
