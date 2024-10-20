@@ -1,23 +1,23 @@
 # IOL HAT
-Repository for IOL HAT
+Repository for IOL HAT, an Raspberry Pi extension for IO-Link communication
 
-![image](https://github.com/Pinetek-Networks/iol-hat/assets/116767503/9132dac7-b8c2-4d44-91c0-e09cfc75237d)
+![IOL HAT RPi (600 x 400 px)](https://github.com/user-attachments/assets/e64add7d-45a9-483a-b5c1-e328c57330e8)
 
 # IOL HAT Overview
-The IOL HAT provides IO-Link (SDCI) connectivity for Raspberry Pi and other single board computers. The IOL HAT consists of a software part ("Master Application") and a hardware based on the MAX 14819 as provided per schematics in this repository. 
+The IOL HAT provides IO-Link (SDCI) connectivity for Raspberry Pi and other single board computers. The IOL HAT consists of a software part ("Master Application") and a hardware based on the MAX14819. 
 It is possible to connect two IOL HAT to one Raspberry Pi (one SPI instance). The communication between the user application and the Master Application is established over a TCP connection. Examples are provided for both C and Python for this connection.
 
 ![image](https://github.com/Pinetek-Networks/iol-hat/assets/116767503/4d07e1c6-1d9f-4f4e-bbbb-611436dbf62c)
 
 # IOL HAT Master Application 
 
-The Master Application is based on the i-link stack from RT-Labs: https://github.com/rtlabs-com/i-link
-For the i-link stack, the GPLv3 license is applied (dual license is available here).  
-The original i-link setup builds a library and examples. The library build and corresponding files are included in the Master Application. The Master Application is based on the examples from the i-link stack. 
-CMake is not used for the IOL HAT.
+The Master Application is based on the i-link stack from RT-Labs (dual license with the  GPLv3 license applied for this build): https://github.com/rtlabs-com/i-link
 
 # IOL HAT usage and examples
-Use the IOL HAT can be used with the binaries provided in the /bin/ folder. The binaries have been compiled with the aarch-linux toolchain for 64-bit version, and the arm-linux-gnueabihf for the 32-bit version.
+Use the IOL HAT can be used with the binary provided in the /bin/ folder. This binary has been compiled with the aarch-linux toolchain for 64-bit version. For other versions, please follow the instructions to build: https://github.com/Pinetek-Networks/iol-hat/blob/main/src-master-application/README.md
+
+**Important note:**
+To work properly, the master application needs to be started **AFTER** 24V power is applied. Failure to do so will result in broken IO-Link communication.
 
 The configuration of the Master Application (iol-hat binary) is done over command line arguments:
 ```
