@@ -54,7 +54,7 @@ AS       := as
 ##
 ## User defined environment variables
 ##
-Objects0=$(IntermediateDirectory)/src_ilink_iolink_cm.c$(ObjectSuffix) $(IntermediateDirectory)/src_ilink_iolink_dl.c$(ObjectSuffix) $(IntermediateDirectory)/src_ilink_iolink_ds.c$(ObjectSuffix) $(IntermediateDirectory)/src_ilink_iolink_ode.c$(ObjectSuffix) $(IntermediateDirectory)/src_iolink_smi.cc$(ObjectSuffix) $(IntermediateDirectory)/src_iol_master_sample_app.cc$(ObjectSuffix) $(IntermediateDirectory)/src_osal_osal_log.c$(ObjectSuffix) $(IntermediateDirectory)/src_status.cc$(ObjectSuffix) $(IntermediateDirectory)/src_realtime.cc$(ObjectSuffix) $(IntermediateDirectory)/src_iolink_ifm.cc$(ObjectSuffix) \
+Objects0=$(IntermediateDirectory)/src_ilink_iolink_cm.c$(ObjectSuffix) $(IntermediateDirectory)/src_ilink_iolink_dl.c$(ObjectSuffix) $(IntermediateDirectory)/src_ilink_iolink_ds.c$(ObjectSuffix) $(IntermediateDirectory)/src_ilink_iolink_ode.c$(ObjectSuffix) $(IntermediateDirectory)/src_iolink_smi.cc$(ObjectSuffix) $(IntermediateDirectory)/src_iol_master_sample_app.cc$(ObjectSuffix) $(IntermediateDirectory)/src_osal_osal_log.c$(ObjectSuffix) $(IntermediateDirectory)/src_status.cc$(ObjectSuffix) $(IntermediateDirectory)/src_realtime.cc$(ObjectSuffix) $(IntermediateDirectory)/src_iolink_port.cc$(ObjectSuffix) \
 	$(IntermediateDirectory)/src_server.cc$(ObjectSuffix) $(IntermediateDirectory)/src_iolink_handler.cc$(ObjectSuffix) $(IntermediateDirectory)/src_osal_osal_fileops.c$(ObjectSuffix) $(IntermediateDirectory)/src_osal_osal.c$(ObjectSuffix) $(IntermediateDirectory)/src_ilink_iolink_max14819_pl.c$(ObjectSuffix) $(IntermediateDirectory)/src_osal_osal_drv.c$(ObjectSuffix) $(IntermediateDirectory)/src_ilink_iolink_sm.c$(ObjectSuffix) $(IntermediateDirectory)/src_ilink_iolink_pde.c$(ObjectSuffix) $(IntermediateDirectory)/src_ilink_iolink_main.c$(ObjectSuffix) $(IntermediateDirectory)/src_ilink_iolink_pl_hw.c$(ObjectSuffix) \
 	$(IntermediateDirectory)/src_ilink_iolink_al.c$(ObjectSuffix) $(IntermediateDirectory)/src_ilink_iolink_pl.c$(ObjectSuffix) 
 
@@ -164,13 +164,13 @@ $(IntermediateDirectory)/src_realtime.cc$(DependSuffix): src/realtime.cc
 $(IntermediateDirectory)/src_realtime.cc$(PreprocessSuffix): src/realtime.cc
 	$(CXX) $(CXXFLAGS) $(IncludePCH) $(IncludePath) $(PreprocessOnlySwitch) $(OutputSwitch) $(IntermediateDirectory)/src_realtime.cc$(PreprocessSuffix) src/realtime.cc
 
-$(IntermediateDirectory)/src_iolink_ifm.cc$(ObjectSuffix): src/iolink_ifm.cc $(IntermediateDirectory)/src_iolink_ifm.cc$(DependSuffix)
-	$(CXX) $(IncludePCH) $(SourceSwitch) "./src/iolink_ifm.cc" $(CXXFLAGS) $(ObjectSwitch)$(IntermediateDirectory)/src_iolink_ifm.cc$(ObjectSuffix) $(IncludePath)
-$(IntermediateDirectory)/src_iolink_ifm.cc$(DependSuffix): src/iolink_ifm.cc
-	@$(CXX) $(CXXFLAGS) $(IncludePCH) $(IncludePath) -MG -MP -MT$(IntermediateDirectory)/src_iolink_ifm.cc$(ObjectSuffix) -MF$(IntermediateDirectory)/src_iolink_ifm.cc$(DependSuffix) -MM src/iolink_ifm.cc
+$(IntermediateDirectory)/src_iolink_port.cc$(ObjectSuffix): src/iolink_port.cc $(IntermediateDirectory)/src_iolink_port.cc$(DependSuffix)
+	$(CXX) $(IncludePCH) $(SourceSwitch) "./src/iolink_port.cc" $(CXXFLAGS) $(ObjectSwitch)$(IntermediateDirectory)/src_iolink_port.cc$(ObjectSuffix) $(IncludePath)
+$(IntermediateDirectory)/src_iolink_port.cc$(DependSuffix): src/iolink_port.cc
+	@$(CXX) $(CXXFLAGS) $(IncludePCH) $(IncludePath) -MG -MP -MT$(IntermediateDirectory)/src_iolink_port.cc$(ObjectSuffix) -MF$(IntermediateDirectory)/src_iolink_port.cc$(DependSuffix) -MM src/iolink_port.cc
 
-$(IntermediateDirectory)/src_iolink_ifm.cc$(PreprocessSuffix): src/iolink_ifm.cc
-	$(CXX) $(CXXFLAGS) $(IncludePCH) $(IncludePath) $(PreprocessOnlySwitch) $(OutputSwitch) $(IntermediateDirectory)/src_iolink_ifm.cc$(PreprocessSuffix) src/iolink_ifm.cc
+$(IntermediateDirectory)/src_iolink_port.cc$(PreprocessSuffix): src/iolink_port.cc
+	$(CXX) $(CXXFLAGS) $(IncludePCH) $(IncludePath) $(PreprocessOnlySwitch) $(OutputSwitch) $(IntermediateDirectory)/src_iolink_port.cc$(PreprocessSuffix) src/iolink_port.cc
 
 $(IntermediateDirectory)/src_server.cc$(ObjectSuffix): src/server.cc $(IntermediateDirectory)/src_server.cc$(DependSuffix)
 	$(CXX) $(IncludePCH) $(SourceSwitch) "./src/server.cc" $(CXXFLAGS) $(ObjectSwitch)$(IntermediateDirectory)/src_server.cc$(ObjectSuffix) $(IncludePath)
