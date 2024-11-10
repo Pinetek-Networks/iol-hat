@@ -19,7 +19,7 @@
 #include "sys/osal_sys.h"
 #include "iolink.h"
 
-#define MASTER_VENDOR_ID 1171
+#define MASTER_VENDOR_ID 0xFFFF
 #define MASTER_ID        123
 
 typedef enum
@@ -74,7 +74,6 @@ typedef struct iolink_app_port_ctx
 {
    iolink_app_master_ctx_t * app_master;
    uint8_t portnumber;
-   iolink_device_type_t type;
    os_event_t * event;
    uint8_t allocated;
    iolink_app_port_state_t app_port_state;

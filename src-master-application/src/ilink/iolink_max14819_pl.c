@@ -38,19 +38,9 @@
 #include <linux/spi/spidev.h>
 #include <sys/ioctl.h>
 
-#define BBB
 
-// PT Mutex
-#ifdef BBB
-//shared_mutex_t mutex;
-#endif
-// !PT Mutex
 
-#ifdef BBB
-// PT CS manual
-int csFD;
-// !PT CS manual 
-#endif //BBB
+
 
 void spi_transfer (
    int fd,
@@ -60,8 +50,8 @@ void spi_transfer (
 {
 	
    // TODO
-   int delay = 100;
-   int speed = 2*1000*1000;
+   int delay = 10;
+   int speed = 15*1000*1000;
    int bits  = 8;
 
    struct spi_ioc_transfer tr;
@@ -74,41 +64,12 @@ void spi_transfer (
 		tr.speed_hz      = speed;
 		tr.bits_per_word = bits;
 
-   // PT: SET Mode
-	 #ifdef BBB
-	 	 	 
-		uint8_t  mode = SPI_MODE_0;
-		int ret=0;
-		
-		ret = ioctl(fd, SPI_IOC_RD_MODE, &mode);
-		if (ret) {
-			LOG_ERROR (IOLINK_PL_LOG, "ioctl(SPI_IOC_RD_MODE)\n");
-		exit(1);
-		}
-		ret = ioctl(fd, SPI_IOC_WR_MODE, &mode);
-		if (ret) {
-			LOG_ERROR (IOLINK_PL_LOG, "ioctl(SPI_IOC_WR_MODE)\n");
-		exit(1);
-		}
-		#endif
-		// !PT
-
-		 
-	 // PT: CS manual / Mutex
-	 #ifdef BBB
-	 //pthread_mutex_lock(mutex.ptr);
-	 write (csFD, "0", 1);   
-	 #endif
-	 
    if (ioctl (fd, SPI_IOC_MESSAGE (1), &tr) < 1)
    {
       LOG_ERROR (IOLINK_PL_LOG, "%s: failed to send SPI message\n", __func__);
    }
 	 
-	 #ifdef BBB
-	 write (csFD, "1", 1);		
-	 #endif
-	 
+
 	 /*
 	 char txBuf[255] = "tx=";
 	 char rxBuf[255] = "rx="; 
@@ -123,10 +84,7 @@ void spi_transfer (
 	 printf("%s\n", txBuf);
 	 printf("%s\n", rxBuf);
 	*/
-	
-	#ifdef BBB
-		//pthread_mutex_unlock(mutex.ptr);
-	#endif
+
 }
 
 //#define SPI_TRANSFER(fd, rbuf, wbuf, size) spi_transfer (fd, rbuf, wbuf, size);
@@ -1014,63 +972,10 @@ static iolink_14819_drv_t * iolink_14819_init_base (const iolink_14819_cfg_t * c
 	 
 	 LOG_DEBUG(IOLINK_PL_LOG, "iolink->fd_spi=%d\n", iolink->fd_spi);
 	 
-	 
-	 // PT: SET Mode
-	 #ifdef BBB
-		uint8_t  mode = SPI_MODE_0;
-		int ret=0;
-		
-		ret = ioctl(iolink->fd_spi, SPI_IOC_WR_MODE, &mode);
-		if (ret) {
-			LOG_ERROR (IOLINK_PL_LOG, "ioctl(SPI_IOC_WR_MODE)\n");
-		exit(1);
-		}		
-		
-		ret = ioctl(iolink->fd_spi, SPI_IOC_RD_MODE, &mode);
-		if (ret) {
-			LOG_ERROR (IOLINK_PL_LOG, "ioctl(SPI_IOC_RD_MODE)\n");
-		exit(1);
-		}
-		#endif
 
 		
 		LOG_DEBUG (IOLINK_PL_LOG, "SPI mode set\n");
-		
-		// !PT
 
-		#ifdef BBB
-		// PT CS --> ONLY BBB
-		if (cfg->cs_channel==0) {
-			csFD= open ("/sys/class/gpio/gpio60/value", O_WRONLY | O_NONBLOCK); 
-		}
-		
-		else {
-		csFD = open ("/sys/class/gpio/gpio50/value", O_WRONLY | O_NONBLOCK); 
-		}
-		// !PT CS
-		#endif
-		
-		// PT Mutex
-		#ifdef BBB
-		/*
-		mutex = shared_mutex_init("/my-mutex");
-		if (mutex.ptr == NULL) {
-			LOG_ERROR (IOLINK_PL_LOG, "cannot create mutex\n");
-		}
-
-		if (mutex.created) {
-			LOG_DEBUG (IOLINK_PL_LOG, "The mutex was just created\n");
-		}
-		
-		else 
-		{
-			LOG_ERROR (IOLINK_PL_LOG, "Mutex was not created\n");
-		}
-		 * */
-		#endif
-		
-	// !PT Mutex
-	
    iolink->exclusive = os_mutex_create();
 
 		//LOG_DEBUG(IOLINK_PL_LOG, "Init MAX registers\n");

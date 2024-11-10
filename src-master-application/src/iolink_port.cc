@@ -56,21 +56,7 @@ static void generic_run0(iolink_app_port_ctx_t *app_port)
     return;
   }	
 		
-	#if 0
-	uint8_t myDataOut[255] =  {0,0,0,0,0,0,0,0,0,0,0,0,0,1};
-	uint8_t myDataIn[255];
-	bool myValid;
-	
-	
-	do_smi_pdout(app_port, true, 14, myDataOut);
-	do_smi_pdin(app_port, &myValid, myDataIn);
-	do_smi_pdinout (app_port);
-	
-	printf("%d\n",myDataIn[0]);
-	#else
-	//printf ("#0\n");
 	pdCount0++;
-	#endif
 			
 	#if MSG_DEBUG
 	char myBuf1[1024] = "";
@@ -255,8 +241,7 @@ static void generic_run1(iolink_app_port_ctx_t *app_port)
 		}
 	}
 
-	os_mutex_unlock (mtx_cmd1);
-	
+	os_mutex_unlock (mtx_cmd1);	
 }
 
 
@@ -264,8 +249,6 @@ void generic_setup0 (iolink_app_port_ctx_t * app_port)
 {
 	LOG_INFO (LOG_STATE_ON, "generic_setup0\n");
 	 do_smi_pdout (app_port, true, 0, NULL);
-	 
-   app_port->type = GENERIC;
 
    app_port->run_function = generic_run0; 
 
@@ -277,8 +260,6 @@ void generic_setup1 (iolink_app_port_ctx_t * app_port)
 	LOG_INFO (LOG_STATE_ON, "generic_setup1\n");
 	 do_smi_pdout (app_port, true, 0, NULL);
 	 
-
-   app_port->type = GENERIC;
 
    app_port->run_function = generic_run1; 
 

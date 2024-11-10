@@ -529,7 +529,7 @@ int main (int argc, char ** argv)
 	iol_14819_cfg.LPCnfgB        = 0x00; // !0x01 -> Initial state = Ox00 (off)
 	iol_14819_cfg.IOStCfgB       = 0x25; // DiCSinkA 0x01, DiFilterEnA 0x04, CQEnA 0x20
 	
-	iol_14819_cfg.DrvCurrLim     = 0x00;
+	iol_14819_cfg.DrvCurrLim     = 0xC0; // CQ 500mA current limit
 
 	if (myExtClock != 1)
 	{
@@ -593,25 +593,6 @@ int main (int argc, char ** argv)
 	
 	LOG_DEBUG (IOLINK_PL_LOG, "SPI init done\n");
 	 
-	/*
-	// >>> PT: SET Mode
-	uint8_t  mode = SPI_MODE_0;
-	int ret=0;
-
-	ret = ioctl(fd, SPI_IOC_WR_MODE, &mode);
-	if (ret) {
-		LOG_ERROR (IOLINK_PL_LOG, "ioctl(SPI_IOC_WR_MODE)\n");
-	exit(1);		
-
-	ret = ioctl(fd, SPI_IOC_RD_MODE, &mode);
-	if (ret) {
-		LOG_ERROR (IOLINK_PL_LOG, "ioctl(SPI_IOC_RD_MODE)\n");
-	exit(1);
-	}
-
-	}
-	// <<< PT
-	*/
 
 	if (myIolPort == 12)
 	{

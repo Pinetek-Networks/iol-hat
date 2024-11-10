@@ -851,7 +851,7 @@ static void cm_smi_masterident_cb (iolink_job_t * job)
       memset (&master_ident, 0, sizeof (arg_block_masterident_t));
 
       master_ident.h.arg_block_id        = IOLINK_ARG_BLOCK_ID_MASTERIDENT;
-      master_ident.h.vendorid            = 1171; // TODO
+      master_ident.h.vendorid            = 0xFFFF; // TODO
       master_ident.h.masterid            = 123;  // TODO
       master_ident.h.master_type         = IOLINK_MASTER_TYPE_MASTER_ACC;
       master_ident.h.features_1          = 0;

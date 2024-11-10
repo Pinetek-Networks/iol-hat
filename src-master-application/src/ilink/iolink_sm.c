@@ -1735,7 +1735,7 @@ static void sm_operate_cb (iolink_job_t * job)
 
    if (
       (real_paramlist->revisionid != IOL_DIR_PARAM_REV_V10) ||
-      (real_paramlist->vendorid != 0x014E)) // SDCI_TC_0196
+      (real_paramlist->vendorid != 0xFFFF)) // SDCI_TC_0196
    {
       iolink_sm_event (port, SM_EVENT_WRITE_MASTER_CYCL_REQ);
    }
