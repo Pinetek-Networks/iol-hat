@@ -31,7 +31,7 @@ The configuration of the Master Application (iol-hat binary) is done over comman
 **Timing considerations:**
 IO-Link is a real-time protocol that requires fast response and cycle times to not run into timeouts. For running with sensors etc. that are queried 1-2 times per second, those timeouts are not crititcal. The iol-hat Master Application can run as user without further considerations.
 If timeouts are critical (e.g., when HMI devices are connected that would change screen when timeouts occur), it is recommended to run the iol-hat in realtime mode. The solution is based on this description: https://forums.raspberrypi.com/viewtopic.php?t=228727
-As preparation, one core needs to be reserved. This is done by adding the this argument to /boot/cmdline.txt:
+As preparation, one core needs to be reserved. This is done by adding the this argument to /boot/firmware/cmdline.txt (for older versions of Raspberry OS, the file is /boot/cmdline.txt):
 ```
 isolcpus=3
 ```
