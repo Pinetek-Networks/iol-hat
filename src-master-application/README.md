@@ -41,4 +41,4 @@ git clone https://github.com/Pinetek-Networks/iol-hat.git
 cd iol-hat/src-master-application
 make
 ```
-After build, you can use the 'iol-hat' application with the options as described on the main page.
+After build, you can use the **iol-master-appl** binary with the options as described on the main page.
