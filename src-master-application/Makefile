@@ -1,7 +1,7 @@
-## Makefile for iol-hat
+## Makefile for the Master Application
 
 ## Release
-ProjectName            :=iol-hat
+ProjectName            :=iol-master-appl
 ConfigurationName      :=Release
 WorkspaceConfiguration :=Release
 IntermediateDirectory  :=./build-$(WorkspaceConfiguration)/
