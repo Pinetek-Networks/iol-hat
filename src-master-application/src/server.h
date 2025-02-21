@@ -4,7 +4,7 @@
 
 typedef struct
 {
-	int spi_fd;
+	iolink_hw_drv_t *iolink_hw;
 	uint8_t port;
 	uint16_t tcpPort;
 } socket_thread_t;
@@ -20,13 +20,18 @@ extern std::mutex cv_m1;
 extern os_mutex_t *mtx_cmd0;
 extern os_mutex_t *mtx_cmd1;
 
-#define CMD_EMPTY 0
-#define CMD_PWR 	1
-#define CMD_LED 	2
-#define CMD_PD  	3
-#define CMD_READ 	4
-#define CMD_WRITE 5
-#define CMD_STATUS 6
+
+
+#define CMD_EMPTY 			0
+#define CMD_PWR 				1
+#define CMD_LED 				2
+#define CMD_PD  				3
+#define CMD_READ 				4
+#define CMD_WRITE 			5
+#define CMD_STATUS 			6
+#ifdef HISTORY
+#define CMD_PD_HISTORY	7
+#endif
 
 
 typedef struct {

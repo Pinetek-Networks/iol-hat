@@ -72,7 +72,7 @@ void Realtime::delay(int us)
 	uint32_t start = micros();
 	if(us >= 100)
 		usleep(us - 50);
-	while(micros()-start < us)
+	while(micros()-start < ((uint32_t) us))
 		;
 }
 

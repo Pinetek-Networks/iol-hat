@@ -20,19 +20,8 @@
 #include "iolink.h"
 
 #define MASTER_VENDOR_ID 0xFFFF
-#define MASTER_ID        123
+#define MASTER_ID        0xFFFF
 
-typedef enum
-{
-   NONE,
-   IFM_LAMP,
-   IFM_RFID,
-   IFM_SENS,
-   IFM_HMI,
-   GOLDEN,
-   UNKNOWN,
-	 GENERIC,
-} iolink_device_type_t;
 
 /* Port events for app_port.event */
 typedef enum
@@ -74,7 +63,7 @@ typedef struct iolink_app_port_ctx
 {
    iolink_app_master_ctx_t * app_master;
    uint8_t portnumber;
-   os_event_t * event;
+	 os_event_t * event;
    uint8_t allocated;
    iolink_app_port_state_t app_port_state;
    iolink_app_port_status_t status;

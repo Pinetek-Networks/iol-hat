@@ -18,7 +18,18 @@
 
 #include "iolink_handler.h"
 
+struct pd_in_struct {
+  char data_in[256];
+};
 
+#ifdef HISTORY
+
+
+#include <deque>
+extern std::deque <pd_in_struct> pd_in_queue0;
+extern std::deque <pd_in_struct> pd_in_queue1;
+
+#endif
 
 
 void generic_setup0 (iolink_app_port_ctx_t * app_port);

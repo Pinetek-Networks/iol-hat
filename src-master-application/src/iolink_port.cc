@@ -13,6 +13,8 @@
  * full license information.
  ********************************************************************/
 
+
+#include "iolink_port.h"
 #include <stdio.h>
 #include <string.h>
 #include "osal.h"
@@ -25,6 +27,8 @@
 #include "status.h"
 
 
+
+
 uint8_t counter;
 //uint8_t debugOut[14] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02};
 
@@ -33,6 +37,15 @@ uint8_t counter;
 std::mutex generic_run_mutex0;
 std::mutex generic_run_mutex1;
 
+
+#ifdef HISTORY
+// Histroy Queue, max size is 255
+#define MAX_PD_IN_QUEUE_SIZE 255
+
+
+std::deque <pd_in_struct> pd_in_queue0;
+std::deque <pd_in_struct> pd_in_queue1;
+#endif
 
 
 #include <iostream>
@@ -113,6 +126,20 @@ static void generic_run0(iolink_app_port_ctx_t *app_port)
 		} 
 		else 
 		{
+			pd_in_struct myData;
+			
+			#ifdef HISTORY
+			// Copy to history
+			memcpy(myData.data_in, cmd0.dataIn,cmd0.lenIn);
+			pd_in_queue0.push_back(myData);
+			
+			// If history queue gets too big, remove first items
+			if (pd_in_queue0.size() > MAX_PD_IN_QUEUE_SIZE)
+			{
+				pd_in_queue0.pop_front();
+			}
+			#endif
+			
 			status[cmd0.port].pdInValid  = 1;
 			
 			#if MSG_DEBUG
@@ -131,9 +158,7 @@ static void generic_run0(iolink_app_port_ctx_t *app_port)
 	}
 
 
-	os_mutex_unlock (mtx_cmd0);
-
-	
+	os_mutex_unlock (mtx_cmd0);	
 }
 
 
@@ -142,33 +167,20 @@ static void generic_run1(iolink_app_port_ctx_t *app_port)
 	
 	std::lock_guard<std::mutex> guard(generic_run_mutex1);
 	os_mutex_lock (mtx_cmd1);
+	
   bool pdin_valid = false;
 	
 	//LOG_DEBUG (LOG_STATE_ON, "c%d p%d\n", cmd.command, app_port->portnumber);
 
-  if (((cmd1.port+1) != app_port->portnumber) && (cmd1.command != CMD_EMPTY)){
+  if (((cmd1.port+1) != app_port->portnumber) && (cmd1.command != CMD_EMPTY)) {
 		
 		LOG_ERROR(LOG_STATE_ON, "Wrong portumber!\n");
 		os_mutex_unlock (mtx_cmd1);
     return;
   }	
 		
-	#if 0
-	uint8_t myDataOut[255] =  {0,0,0,0,0,0,0,0,0,0,0,0,0,1};
-	uint8_t myDataIn[255];
-	bool myValid;
-	
-	
-	do_smi_pdout(app_port, true, 14, myDataOut);
-	do_smi_pdin(app_port, &myValid, myDataIn);
-	do_smi_pdinout (app_port);
-	
-	printf("%d\n",myDataIn[0]);
-	#else
-	//printf ("#1\n");
 	pdCount1++;
-	#endif
-	
+			
 	#if MSG_DEBUG
 	char myBuf1[1024] = "";
 	
@@ -182,22 +194,22 @@ static void generic_run1(iolink_app_port_ctx_t *app_port)
 				
 	printf("tx[%d]=%s\n", cmd1.lenOut, myBuf1);
 	#endif
-		
+	
 	status[cmd1.port].pdOutLength = cmd1.lenOut;
-		
+			
 	if (cmd1.lenOut > 0)
 	{
 		do_smi_pdout(app_port, true, cmd1.lenOut, cmd1.dataOut);
 		status[cmd1.port].pdOutValid = 1;
 	}
-		
+	
 	else 
 	{
 		status[cmd1.port].pdOutValid = 0;
 	}
-					
+				
 	status[cmd1.port].pdInLength = cmd1.lenIn;
-		
+	
 	if (cmd1.lenIn > 0)
 	{
 		int8_t readLen = do_smi_pdin(app_port, &pdin_valid, cmd1.dataIn);
@@ -208,7 +220,7 @@ static void generic_run1(iolink_app_port_ctx_t *app_port)
 			status[cmd1.port].pdInValid  = 0;
 		} 
 	}
-			
+				
 	if (do_smi_pdinout (app_port) != IOLINK_ERROR_NONE)
 	{
 		 LOG_WARNING (LOG_STATE_ON, "%s: PDInOut failed on port %u\n", __func__, app_port->portnumber);
@@ -224,6 +236,20 @@ static void generic_run1(iolink_app_port_ctx_t *app_port)
 		} 
 		else 
 		{
+			pd_in_struct myData;
+			
+			#ifdef HISTORY
+			// Copy to history
+			memcpy(myData.data_in, cmd1.dataIn,cmd1.lenIn);
+			pd_in_queue1.push_back(myData);
+			
+			// If history queue gets too big, remove first items
+			if (pd_in_queue1.size() > MAX_PD_IN_QUEUE_SIZE)
+			{
+				pd_in_queue1.pop_front();
+			}
+			#endif
+			
 			status[cmd1.port].pdInValid  = 1;
 			
 			#if MSG_DEBUG
