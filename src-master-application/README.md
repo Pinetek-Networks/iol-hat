@@ -51,6 +51,7 @@ To build the Release:
 ```
 make
 ```
+<<<<<<< HEAD
 
 To build the Debug:
 ```
@@ -63,3 +64,6 @@ make clean
 ```
 
 After build, you can use the **iol-master-appl** binary in the "bin/release" or in "bin/debug" folder, depending on the selected build. The application can now be started with the options as described on the main page.
+=======
+After build, you can use the **iol-master-appl** binary with the options as described on the main page.
+>>>>>>> 1c4e3e19af3e9e90593fa9cd9b9903a299ad4871
