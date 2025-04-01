@@ -37,7 +37,10 @@ sudo apt install gpiod
 ```
 # IOL HAT usage and examples
 To communicate with the IO-Link devices, start the Master Application (iol-master-appl) and then your application. Using the examples is a good starting point to develop your application.
-Further information especially on the TCP communication can be found in the IOL HAT datasheet on the webpage: [pinetek-networks.com/en/iol-hat](https://pinetek-networks.com/en/iol-hat/)
+Further information especially on the TCP communication can be found here:
+* IOL HAT webpage: https://pinetek-networks.com/en/iol-hat (IOL HAT product page)
+* IOL HAT manuals (software and hardware): https://download.pinetek-networks.com/iol-hat/doc (IOL HAT manual download)
+* IOL HAT Knowledge Base: https://www.pinetek-networks.com/knowledge-base/iol-hat (IOL HAT online manual)
 
 **Important note:**
 To work properly, the master application needs to be started **AFTER** 24V power is applied. Failure to do so will result in broken IO-Link communication.
