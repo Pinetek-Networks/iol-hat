@@ -1,5 +1,5 @@
 # IOL HAT
-Software repository for IOL HAT, an Raspberry Pi extension for IO-Link communication
+Software repository for IOL HAT, an Raspberry Pi extension for IO-Link communication: https://www.pinetek-networks.com/iol-hat
 
 ![IOL HAT RPi (600 x 400 px)](https://github.com/user-attachments/assets/e64add7d-45a9-483a-b5c1-e328c57330e8)
 
