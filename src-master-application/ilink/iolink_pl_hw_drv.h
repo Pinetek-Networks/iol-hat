@@ -72,9 +72,11 @@ typedef struct iolink_hw_ops
       os_event_t * event,
       uint32_t flag);
    void (*pl_handler) (struct iolink_hw_drv * iolink_hw, void * arg);
-	 void (*set_power) (struct iolink_hw_drv * iolink_hw, uint8_t _port, bool _power);
+   bool (*read_di)(struct iolink_hw_drv * iolink_hw, void * arg);
+   void (*write_do)(struct iolink_hw_drv * iolink_hw, void * arg, bool do_val);
+	 void (*set_power) (struct iolink_hw_drv * iolink_hw, uint8_t _port, bool _power, uint16_t _delay_current_limit);
 	 void (*set_led) (struct iolink_hw_drv * iolink_hw, uint8_t _port, bool _ledR, bool _ledG);
-	 void (*get_status) (struct iolink_hw_drv * iolink_hw, uint8_t _port, bool *_power, uint8_t *_baudrate);
+	 void (*get_status) (struct iolink_hw_drv * iolink_hw, uint8_t _port, bool *_power, uint8_t *_baudrate, uint8_t *_error);
 } iolink_hw_ops_t;
 
 typedef struct iolink_hw_drv

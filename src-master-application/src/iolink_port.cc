@@ -55,23 +55,21 @@ std::deque <pd_in_struct> pd_in_queue1;
 
 static void generic_run0(iolink_app_port_ctx_t *app_port) 
 {
-	
+	LOG_DEBUG(IOLINK_PL_LOG, "generic_run0(..)\n");
 	std::lock_guard<std::mutex> guard(generic_run_mutex0);
 	os_mutex_lock (mtx_cmd0);
   bool pdin_valid = false;
 	
-	//LOG_DEBUG (LOG_STATE_ON, "c%d p%d\n", cmd.command, app_port->portnumber);
-
   if (((cmd0.port+1) != app_port->portnumber) && (cmd0.command != CMD_EMPTY)) {
 		
-		LOG_ERROR(LOG_STATE_ON, "Wrong portumber!\n");
+		LOG_ERROR(IOLINK_PL_LOG, "Wrong portumber!\n");
 		os_mutex_unlock (mtx_cmd0);
     return;
   }	
 		
 	pdCount0++;
 			
-	#if MSG_DEBUG
+	#ifdef MSG_DEBUG
 	char myBuf1[1024] = "";
 	
 	
@@ -100,6 +98,8 @@ static void generic_run0(iolink_app_port_ctx_t *app_port)
 				
 	status[cmd0.port].pdInLength = cmd0.lenIn;
 	
+	LOG_DEBUG(IOLINK_PL_LOG, "status[cmd0.port].pdInLength=%d\n", status[cmd0.port].pdInLength);
+	
 	if (cmd0.lenIn > 0)
 	{
 		int8_t readLen = do_smi_pdin(app_port, &pdin_valid, cmd0.dataIn);
@@ -126,9 +126,10 @@ static void generic_run0(iolink_app_port_ctx_t *app_port)
 		} 
 		else 
 		{
-			pd_in_struct myData;
+
 			
 			#ifdef HISTORY
+			pd_in_struct myData;
 			// Copy to history
 			memcpy(myData.data_in, cmd0.dataIn,cmd0.lenIn);
 			pd_in_queue0.push_back(myData);
@@ -142,7 +143,41 @@ static void generic_run0(iolink_app_port_ctx_t *app_port)
 			
 			status[cmd0.port].pdInValid  = 1;
 			
-			#if MSG_DEBUG
+			
+		#if 0
+					// Is IO-Link running
+					if (app_port->app_port_state == IOL_STATE_RUNNING)
+					{
+						memcpy(myCmd->dataOut, &buffer[4], myCmd->lenOut);
+						memcpy(&buffer[4], myCmd->dataIn, myCmd->lenIn);
+						buffer[3] = myCmd->lenIn;
+					}
+					else
+					{
+						// If IO-Link is not running we are in SIO mode
+						bool pdin_valid = false;
+						int8_t readLen = do_smi_pdin(app_port, &pdin_valid, myCmd->dataIn);
+						if (readLen > 0)
+						{
+							memcpy(&buffer[4], myCmd->dataIn, readLen);
+							buffer[3] = readLen;
+						}
+						else if (myCmd->lenOut > 0)
+						{
+							memcpy(myCmd->dataOut, &buffer[4], myCmd->lenOut);
+							uint8_t rc = do_smi_pdout(app_port, true, 1, myCmd->dataOut);
+							if (rc != 0)
+							{
+								LOG_WARNING(LOG_STATE_ON, "%s: Failed to set DO on port %u\n", __func__, app_port->portnumber);
+							}
+						}
+					}
+					send(newSocket, buffer, myCmd->lenIn+4, 0);		
+		
+		
+		#endif			
+			
+			#ifdef MSG_DEBUG
 			char myBuf2[1024] = "";
 			
 			for (int i = 0; i < cmd0.lenIn; i++) 
@@ -181,7 +216,7 @@ static void generic_run1(iolink_app_port_ctx_t *app_port)
 		
 	pdCount1++;
 			
-	#if MSG_DEBUG
+	#ifdef MSG_DEBUG
 	char myBuf1[1024] = "";
 	
 	
@@ -236,9 +271,8 @@ static void generic_run1(iolink_app_port_ctx_t *app_port)
 		} 
 		else 
 		{
-			pd_in_struct myData;
-			
 			#ifdef HISTORY
+			pd_in_struct myData;
 			// Copy to history
 			memcpy(myData.data_in, cmd1.dataIn,cmd1.lenIn);
 			pd_in_queue1.push_back(myData);
@@ -252,7 +286,7 @@ static void generic_run1(iolink_app_port_ctx_t *app_port)
 			
 			status[cmd1.port].pdInValid  = 1;
 			
-			#if MSG_DEBUG
+			#ifdef MSG_DEBUG
 			char myBuf2[1024] = "";
 			
 			for (int i = 0; i < cmd1.lenIn; i++) 

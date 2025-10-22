@@ -3381,9 +3381,7 @@ static void iolink_dl_handle_error (iolink_port_t * port)
 {
 #if IOLINK_HW == IOLINK_HW_MAX14819
    iolink_dl_t * dl = iolink_get_dl_ctx (port);
-
    iolink_pl_get_error (port, &dl->cqerr, &dl->devdly);
-
    if ((dl->devdly & BIT (7)) != 0) // DelayErr
    {
       dl->rxtimeout = true;
@@ -3404,13 +3402,31 @@ static void iolink_dl_handle_error (iolink_port_t * port)
    }
    if ((dl->cqerr & (BIT (7) | BIT (6) | BIT (5) | BIT (4))) != 0) // TransmErrA/TCyclErrA/TChksmErA/TSizeErrA
    {
-      dl->txerror = true;
+      // Filter out TCyclErrA (BIT 6) - check other transmission errors only
+      uint8_t real_tx_errors = dl->cqerr & (BIT (7) | BIT (5) | BIT (4));
+      
+      if (real_tx_errors != 0)  // TransmErrA/TChksmErA/TSizeErrA
+      {
+         dl->txerror = true;
       LOG_WARNING (
          IOLINK_DL_LOG,
          "%s: Transmission error: %x\n",
          __func__,
          dl->cqerr);
    }
+      else if (dl->cqerr & BIT(6))  // Only TCyclErrA is set
+      {
+         // Log as debug only - this is typically a spurious error
+         LOG_DEBUG (
+            IOLINK_DL_LOG,
+            "%s: Spurious TCyclErrA (0x40) detected and filtered on Port %d\n",
+            __func__,
+            iolink_get_portnumber (port));
+         // Don't set dl->txerror - treat as non-error
+      }
+   }
+   
+   // Handle all error conditions - THIS MUST BE OUTSIDE THE TRANSMISSION ERROR BLOCK
    if (dl->rxerror || dl->rxtimeout || dl->txerror)
    {
       iolink_dl_message_h_sm (port);

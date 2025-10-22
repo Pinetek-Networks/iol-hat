@@ -34,6 +34,14 @@ extern "C" {
 #define MAX14819_CQCFG_NPN           BIT(3)
 #define MAX14819_CQCFG_SINKSEL(x)    (((x) & 0x03) << 4)
 #define MAX14819_CQCFG_SINKSEL_MASK  MAX14819_CQCFG_SINKSEL (0x3)
+
+#define MAX14819_CQCFG_SINK_SRC_OFF    (0)
+#define MAX14819_CQCFG_SINK_SRC_5MA    (1 << 4)
+#define MAX14819_CQCFG_SINK_SRC_2MA    (2 << 4)
+#define MAX14819_CQCFG_SINK_SRC_150UA  (3 << 4)
+
+
+
 #define MAX14819_CQCFG_SOURCESINK    BIT(6)
 #define MAX14819_CQCFG_IEC3TH        BIT(7)
 
@@ -110,7 +118,10 @@ typedef struct iolink_14819_cfg
    /** Optional function to read chip registers from the application */
    void (*register_read_reg_fn) (void * read_reg_function);
 	 // PT
+	 // Chip-Select channel
 	 uint8_t cs_channel;
+	 // Delay of current limit in ms
+	 uint16_t delay_current_limit;
 	 // !PT
 } iolink_14819_cfg_t;
 
@@ -138,11 +149,7 @@ iolink_hw_drv_t * iolink_14819_init (const iolink_14819_cfg_t * cfg);
  */
 void iolink_14819_isr (void * arg);
 
-/*
-void setPower(int _fd, uint8_t _port, bool _power);
-void setLED(int _fd, uint8_t _port, bool _ledR, bool _ledG);
-void getStatus(int _fd, uint8_t _port, bool *_power, uint8_t *_baudrate);
-*/
+
 
 #ifdef __cplusplus
 }

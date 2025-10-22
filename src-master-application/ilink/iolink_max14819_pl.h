@@ -69,7 +69,7 @@ typedef struct iolink_14819_drv
 
 
 
-void iolink_pl_max14819_set_power(iolink_hw_drv_t * iolink_hw, uint8_t _port, bool _power);
+void iolink_pl_max14819_set_power(iolink_hw_drv_t * iolink_hw, uint8_t _port, bool _power, uint16_t _delay_current_limit);
 void iolink_pl_max14819_set_led(iolink_hw_drv_t * iolink_hw, uint8_t _port, bool _ledR, bool _ledG);
-void iolink_pl_max14819_get_status(iolink_hw_drv_t * iolink_hw, uint8_t _port, bool *_power, uint8_t *_baudrate);
+void iolink_pl_max14819_get_status(iolink_hw_drv_t * iolink_hw, uint8_t _port, bool *_power, uint8_t *_baudrate, uint8_t *_error);
 #endif /* IOLINK_MAX14819_PL_H */

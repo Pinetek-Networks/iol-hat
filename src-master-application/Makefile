@@ -4,11 +4,14 @@ CC = gcc
 
 # Common flags
 COMMON_FLAGS = -Wall -Wextra \
+               -Wno-unused-parameter \
                -I./include \
                -I./include/ilink \
                -I./include/osal \
                -I./include/sys \
-               -I./ilink
+               -I./ilink \
+               -I./src \
+               -DHISTORY
 
 # Debug flags
 DEBUG_FLAGS = -g -O0 -DPINEDEBUG
@@ -48,7 +51,7 @@ OBJS_C_ILINK = $(SRCS_C_ILINK:$(ILINK_DIR)/%.c=$(BUILD_DIR)/%.o)
 OBJS_C_OSAL = $(SRCS_C_OSAL:$(IOL_OSAL_DIR)/%.c=$(BUILD_DIR)/%.o)
 
 # Output binary
-TARGET = $(BIN_DIR)/iol_master_app
+TARGET = $(BIN_DIR)/iol-master-appl
 
 # External libraries
 LIBS = -L$(LIB_DIR) -lgpiod -lpthread -lrt
@@ -68,6 +71,9 @@ directories:
 # Link the final executable
 $(TARGET): $(OBJS_CXX) $(OBJS_C_ILINK) $(OBJS_C_OSAL)
 	$(CXX) $^ -o $@ $(LIBS)
+ifeq ($(BUILD_TYPE),release)
+	strip $@
+endif
 	@echo "Build complete: $@"
 
 # Compile C++ source files

@@ -33,7 +33,7 @@ void _iolink_pl_hw_spi_transfer (
    int spi_fd = fd;
    
    int delay = 10;
-   int speed = 15*1000*1000;
+   int speed = 10*1000*1000;
    int bits  = 8;
 
    struct spi_ioc_transfer tr;
@@ -46,7 +46,6 @@ void _iolink_pl_hw_spi_transfer (
 		tr.speed_hz      = speed;
 		tr.bits_per_word = bits;
 
-	//gpiod_line_set_value(lineError, 1);
 	
    if (ioctl (spi_fd, SPI_IOC_MESSAGE (1), &tr) < 1)
    {
@@ -68,7 +67,4 @@ void _iolink_pl_hw_spi_transfer (
 	 printf("%s\n", txBuf);
 	 printf("%s\n", rxBuf);
 	*/
-	
-	//gpiod_line_set_value(lineError, 0);
-
 }

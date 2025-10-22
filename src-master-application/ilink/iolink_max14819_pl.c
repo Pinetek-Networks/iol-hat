@@ -26,6 +26,10 @@
 #include "osal.h"
 
 #include <stdio.h>
+#include <time.h>
+#include <sys/time.h>
+
+#include <stdio.h>
 
 #ifdef __rtk__
 #include <gpio.h>
@@ -39,7 +43,7 @@
 #include <linux/spi/spidev.h>
 #include <sys/ioctl.h>
 #include "iolink_max14819.h"
-
+#include "common.h"
 
 
 //#define SPI_TRANSFER(fd, rbuf, wbuf, size) spi_transfer (fd, rbuf, wbuf, size);
@@ -113,6 +117,15 @@
 #define MAX14819_CQCTRL_WU_PULS     BIT (4)
 #define MAX14819_CQCTRL_EST_COM     BIT (5)
 
+#define MAX14819_MSGCTRL_INV_CQ           BIT (0)
+#define MAX14819_MSGCTRL_R_MESSG_RDY_EN   BIT (1)
+#define MAX14819_MSGCTRL_R_CHKS_EN        BIT (2)
+#define MAX14819_MSGCTRL_TX_KEEPMSG       BIT (3)
+#define MAX14819_MSGCTRL_TX_SIZE_EN       BIT (4)
+#define MAX14819_MSGCTRL_INS_CHKS         BIT (5)
+#define MAX14819_MSGCTRL_SPI_CHKS         BIT (6)
+#define MAX14819_MSGCTRL_TX_ER_DESTROY    BIT (7)
+
 #define MAX14819_INTERRUPT_RX_DATA_RDY_A BIT (0)
 #define MAX14819_INTERRUPT_RX_DATA_RDY_B BIT (1)
 #define MAX14819_INTERRUPT_RX_ERR_A      BIT (2)
@@ -130,6 +143,7 @@
 #define MAX14819_INTERRUPTEN_TX_ERR_B      MAX14819_INTERRUPT_TX_ERR_B
 #define MAX14819_INTERRUPTEN_WURQ          MAX14819_INTERRUPT_WURQ
 #define MAX14819_INTERRUPTEN_STATUS        MAX14819_INTERRUPT_STATUS
+
 
 #define MAX14819_REVID_MAX14819          0x0A
 #define MAX14819_REVID_MAX14819A         0x0E
@@ -252,18 +266,21 @@ static void iolink_14819_set_DO (
    iolink_14819_channel_t ch,
    iolink_14819_cq_cfg_t * cfg)
 {
+	
+	LOG_DEBUG (IOLINK_PL_LOG, "iolink_14819_set_DO, cfg->DO.cq_conf_val=%02x\n",cfg->DO.cq_conf_val);
    uint8_t regval;
    os_mutex_lock (iolink->exclusive);
-   //printf("A>%d\n", ch);	 
+ 
    regval = iolink_14819_read_register (iolink, REG_InterruptEn);
    iolink_14819_write_register (iolink, REG_InterruptEn, regval & ~(0x05 << ch));
    regval = iolink_14819_read_register (iolink, REG_IOStCfgA + ch);
    iolink_14819_write_register (iolink, REG_IOStCfgA + ch, regval | MAX14819_IOSTCFG_TXEN);
    os_mutex_unlock (iolink->exclusive);
-	 //printf("A<%d\n", ch);
-   iolink_14819_write_register (iolink, REG_CQCtrlA + ch, 0x0C);
-   iolink_14819_write_register (iolink, REG_MsgCtrlA + ch, 0x01);
-   iolink_14819_write_register (iolink, REG_CQCfgA + ch, cfg->DO.cq_conf_val & 0x0C);
+
+   iolink_14819_write_register (iolink, REG_CQCtrlA + ch,   MAX14819_CQCTRL_RX_FIFO_RST | MAX14819_CQCTRL_TX_FIFO_RST);
+   iolink_14819_write_register (iolink, REG_MsgCtrlA + ch,  MAX14819_MSGCTRL_INV_CQ);
+   iolink_14819_write_register (iolink, REG_CQCfgA + ch,   cfg->DO.cq_conf_val);
+   //iolink_14819_write_register (iolink, REG_CQCfgA + ch,   cfg->DO.cq_conf_val);
    iolink_14819_write_register (iolink, REG_TrigAssgnA + ch, 0x00);
    iolink->is_iolink[ch]    = false;
    iolink->wurq_request[ch] = false;
@@ -274,24 +291,22 @@ static void iolink_14819_set_DI (
    iolink_14819_channel_t ch,
    iolink_14819_cq_cfg_t * cfg)
 {
+	LOG_DEBUG (IOLINK_PL_LOG, "iolink_14819_set_DI, cfg->DI.cq_conf_val=%02x\n",cfg->DI.cq_conf_val);
    uint8_t regval;
 
    os_mutex_lock (iolink->exclusive);
-	 //printf("B>%d\n", ch);	
+
    regval = iolink_14819_read_register (iolink, REG_InterruptEn);
    iolink_14819_write_register (iolink, REG_InterruptEn, regval & ~(0x05 << ch));
    os_mutex_unlock (iolink->exclusive);
-	 //printf("B<%d\n", ch);	
-   iolink_14819_write_register (iolink, REG_CQCtrlA + ch, 0x0C);
-   iolink_14819_write_register (iolink, REG_MsgCtrlA + ch, 0x01);
-   iolink_14819_write_register (
-      iolink,
-      REG_CQCfgA + ch,
-      (cfg->DI.cq_conf_val & 0xF1) | 0x02);
+
+   iolink_14819_write_register (iolink, REG_CQCtrlA + ch,   MAX14819_CQCTRL_RX_FIFO_RST | MAX14819_CQCTRL_TX_FIFO_RST);
+   iolink_14819_write_register (iolink, REG_MsgCtrlA + ch,  MAX14819_MSGCTRL_INV_CQ);
+   iolink_14819_write_register (iolink, REG_CQCfgA + ch, cfg->DI.cq_conf_val);
+
    iolink_14819_write_register (iolink, REG_TrigAssgnA + ch, 0x00);
    iolink->is_iolink[ch]    = false;
    iolink->wurq_request[ch] = false;
-	 //printf("B1<%d\n", ch);	
 }
 
 static void iolink_14819_set_SDCI (
@@ -302,7 +317,7 @@ static void iolink_14819_set_SDCI (
    uint8_t regval;
 
    os_mutex_lock (iolink->exclusive);
-	 //printf("C>%d\n", ch);	
+
    // Disable interrupts
    regval = iolink_14819_read_register (iolink, REG_InterruptEn);
    iolink_14819_write_register (iolink, REG_InterruptEn, regval & ~(0x05 << ch));
@@ -313,7 +328,7 @@ static void iolink_14819_set_SDCI (
    iolink_14819_write_register (iolink, REG_CyclTmrA + ch, cfg->SDCI.cycl_tmr_val);
    iolink_14819_write_register (iolink, REG_DeviceDlyA + ch, cfg->SDCI.dev_del_val);
    iolink_14819_write_register (iolink, REG_TrigAssgnA + ch,  cfg->SDCI.trig_assg_val);
-   iolink_14819_write_register (iolink, REG_CQCfgA + ch, 0x34);
+   iolink_14819_write_register (iolink, REG_CQCfgA + ch, 0x15);
    // Enable interrupts
    regval = iolink_14819_read_register (iolink, REG_InterruptEn);
    iolink_14819_write_register (
@@ -322,7 +337,7 @@ static void iolink_14819_set_SDCI (
       regval | (cfg->SDCI.IntE & (0x05 << ch)));
    iolink->is_iolink[ch] = true;
    os_mutex_unlock (iolink->exclusive);
-	 //printf("C<%d\n", ch);	
+
 }
 
 static void iolink_14819_send_master_message (
@@ -331,14 +346,10 @@ static void iolink_14819_send_master_message (
 {
    uint8_t reg_val;
    uint8_t reg = REG_CQCtrlA + ch;
-	 
-	 //printf("J>%d\n", ch);	
 
    reg_val = iolink_14819_read_register (iolink, reg);
    reg_val |= MAX14819_CQCTRL_CQ_SEND;
    iolink_14819_write_register (iolink, reg, reg_val);
-	 //printf("J<%d\n", ch);	
-	 
 
 }
 
@@ -349,14 +360,10 @@ static void iolink_14819_delete_master_message (
    uint8_t regCQCtrl, reg_val;
 
    regCQCtrl = REG_CQCtrlA + ch;
-	 
-	 //printf("K>%d\n", ch);	
 
    reg_val = iolink_14819_read_register (iolink, regCQCtrl);
    reg_val |= MAX14819_CQCTRL_TX_FIFO_RST;
    iolink_14819_write_register (iolink, regCQCtrl, reg_val);
-	 
-	 //printf("K<%d\n", ch);
 }
 
 static void iolink_14819_set_master_message (
@@ -380,7 +387,7 @@ static void iolink_14819_set_master_message (
    buffer[1] = txlen;
    memcpy (&buffer[2], data, txlen);
 	 
-	 //printf("L>%d\n", ch);
+
    iolink_14819_burst_write_tx (iolink, ch, buffer, txlen + 2);
 
    reg_val = iolink_14819_read_register (iolink, regMC);
@@ -393,7 +400,28 @@ static void iolink_14819_set_master_message (
       reg_val &= ~BIT (3);
    }
    iolink_14819_write_register (iolink, regMC, reg_val);
-	 //printf("L<%d\n", ch);
+}
+
+static void iolink_max14819_clear_errors (
+   iolink_14819_drv_t * iolink,
+   iolink_14819_channel_t ch)
+{
+   uint8_t cqerr;
+   uint8_t devdly;
+
+   cqerr = iolink_14819_read_register (iolink, REG_CQErrA + ch);
+   devdly = iolink_14819_read_register (iolink, REG_DeviceDlyA + ch);
+
+   LOG_DEBUG (
+      IOLINK_PL_LOG,
+      "PL: %s [ch: %d]: CQErr=0x%02x, DeviceDly=0x%02x\n",
+      __func__,
+      ch,
+      cqerr,
+      devdly);
+
+   (void)cqerr;
+   (void)devdly;
 }
 
 static iolink_baudrate_t iolink_pl_max14819_get_baudrate (
@@ -471,18 +499,19 @@ static bool iolink_pl_max14819_set_mode (
    CC_ASSERT (ch >= MAX14819_CH_MIN);
    CC_ASSERT (ch <= MAX14819_CH_MAX);
 
-
    os_mutex_lock (iolink->exclusive);
-	 //printf("D>%d\n", ch);	
    switch (mode)
    {
    case iolink_mode_DO:
-      iol_cfg.DO.cq_conf_val = 0x04;
+	 
+      iol_cfg.DO.cq_conf_val = CQCfgA_DO[ch];
       iolink_14819_set_DO (iolink, ch, &iol_cfg);
       break;
    case iolink_mode_INACTIVE:
    case iolink_mode_DI:
-      iol_cfg.DI.cq_conf_val = 0xA2;
+      iol_cfg.DI.cq_conf_val = CQCfgA_DI[ch]; 
+		
+			
       iolink_14819_set_DI (iolink, ch, &iol_cfg);
       break;
    case iolink_mode_SDCI:
@@ -499,20 +528,17 @@ static bool iolink_pl_max14819_set_mode (
       iolink->wurq_request[ch] = false; /* Since we clear CQCTRL_EST_COM */
 
       iol_cfg.SDCI.IntE         = 0xFF;
-      iol_cfg.SDCI.msg_ctrl_val = 0x26;  /* InsChks = 1, RChksEn = 1,
-                                            RMessageRdyEn = 1, TSizeEn = 1 */
+      iol_cfg.SDCI.msg_ctrl_val = 0x26;  /* InsChks = 1, RChksEn = 1, RMessageRdyEn = 1, TSizeEn = 1 */
       iol_cfg.SDCI.chan_stat_val = 0x40; /* FramerEn */
       iol_cfg.SDCI.cycl_tmr_val  = 0x00;
-			#warning check RpsnsTmrEn
-      iol_cfg.SDCI.dev_del_val   = 0x4F; //0x43; /* BDelay=2, DDelay=1, RpsnsTmrEn=1 */
+      iol_cfg.SDCI.dev_del_val   = 0x1F; /* BDelay=2, DDelay=7, RpsnsTmrEn=1, sccording to MAX14819 datasheet, DDelay should be 1 for IO-Link compliance */
       iol_cfg.SDCI.trig_assg_val = 0x00;
       iol_cfg.SDCI.cq_ctrl_val   = 0x00; /* TxFifoRst and RxFifoRst to 0*/
       iolink_14819_set_SDCI (iolink, ch, &iol_cfg);
       break;
    }
    os_mutex_unlock (iolink->exclusive);
-	 //printf("D<%d\n", ch);	
-
+	 
    return true;
 }
 
@@ -546,10 +572,10 @@ static void iolink_pl_max14819_enable_cycle_timer (
    uint8_t reg = REG_CQCtrlA + ch;
 
    reg_val = iolink_14819_read_register (iolink, reg);
-	 //printf("E>%d\n", ch);	
+
    reg_val |= MAX14819_CQCTRL_CYC_TMR_EN;
    iolink_14819_write_register (iolink, reg, reg_val);
-	 //printf("E<%d\n", ch);	
+
 }
 
 static void iolink_pl_max14819_disable_cycle_timer (
@@ -583,11 +609,10 @@ static void iolink_pl_max14819_get_error (
    CC_ASSERT (ch <= MAX14819_CH_MAX);
 
    os_mutex_lock (iolink->exclusive);
-	 //printf("F>%d\n", ch);	
+
    *cqerr  = iolink_14819_read_register (iolink, REG_CQErrA + ch);
    *devdly = iolink_14819_read_register (iolink, REG_DeviceDlyA + ch);
    os_mutex_unlock (iolink->exclusive);
-	 //printf("F<%d\n", ch);	
 }
 
 static bool iolink_pl_max14819_get_data (
@@ -605,11 +630,11 @@ static bool iolink_pl_max14819_get_data (
    CC_ASSERT (ch <= MAX14819_CH_MAX);
 
    os_mutex_lock (iolink->exclusive);
-	 //printf("G>%d\n", ch);	
+
    uint8_t RxBytesAct = iolink_14819_read_register (iolink, reg);
    uint8_t rxbytes    = iolink_14819_read_register (iolink, lvlreg);
 
-	#warning check error handling
+	//	#warning check error handling
 
    if (RxBytesAct != rxbytes)
    {
@@ -656,7 +681,6 @@ static bool iolink_pl_max14819_get_data (
 
    iolink->data_ready[ch] = false;
    os_mutex_unlock (iolink->exclusive);
-	 //printf("G<%d\n", ch);	
 
    return (rxbytes > 0);
 }
@@ -719,11 +743,11 @@ static bool iolink_pl_max14819_init_sdci (iolink_hw_drv_t * iolink_hw, void * ar
    uint8_t reg_cqctrl = REG_CQCtrlA + ch;
 
    os_mutex_lock (iolink->exclusive);
-	 //printf("H>%d\n", ch);	
+	 
    if (iolink->wurq_request[ch])
    {
       os_mutex_unlock (iolink->exclusive);
-			//printf("Ha<%d\n", ch);	
+		
       return false;
    }
    reg_val = iolink_14819_read_register (iolink, reg_cqctrl);
@@ -737,15 +761,55 @@ static bool iolink_pl_max14819_init_sdci (iolink_hw_drv_t * iolink_hw, void * ar
    reg_val |= MAX14819_INTERRUPTEN_WURQ;
    iolink_14819_write_register (iolink, REG_InterruptEn, reg_val);
 
+
+   const uint8_t clk_val = iolink_14819_read_register(iolink, REG_Clock);
+   // When driver is controlled over SPI
+   // recieve mode must be set manually over SPI.
+   // Refer to MAX14819 datasheet Rev 3, page 27 - Wake-Up Pulse Generation
+   if (clk_val & MAX14819_CLOCK_TXTXENDIS)
+   {
+      reg_val = iolink_14819_read_register(iolink, REG_IOStCfgA+ch);
+      reg_val &= ~(MAX14819_IOSTCFG_TXEN | MAX14819_IOSTCFG_TX);
+      iolink_14819_write_register(iolink, REG_IOStCfgA+ch, reg_val);
+   }
+
    reg_val = MAX14819_CQCTRL_EST_COM;
    iolink_14819_write_register (iolink, reg_cqctrl, reg_val);
 
    iolink->wurq_request[ch] = true;
    os_mutex_unlock (iolink->exclusive);
-	 //printf("H<%d\n", ch);	
+	 
 
    return true;
 }
+
+static bool iolink_pl_max14819_sio_read_di (iolink_hw_drv_t * iolink_hw, void * arg)
+{
+   iolink_14819_drv_t * iolink    = (iolink_14819_drv_t *)iolink_hw;
+   iolink_14819_channel_t ch   = (iolink_14819_channel_t)arg;
+
+   const uint8_t iostcfg_val = iolink_14819_read_register (iolink, REG_IOStCfgA + ch);
+   return iostcfg_val & MAX14819_IOSTCFG_CQLEVEL;
+}
+
+static void iolink_pl_max14819_sio_set_do (iolink_hw_drv_t * iolink_hw, void * arg, bool do_val)
+{
+   iolink_14819_drv_t * iolink    = (iolink_14819_drv_t *)iolink_hw;
+   iolink_14819_channel_t ch   = (iolink_14819_channel_t)arg;
+
+   uint8_t iostcfg_val = iolink_14819_read_register (iolink, REG_IOStCfgA + ch);
+   if (do_val)
+   {
+      iostcfg_val |= MAX14819_IOSTCFG_TX;
+   }
+   else
+   {
+      iostcfg_val &= ~(MAX14819_IOSTCFG_TX);
+   }
+   iolink_14819_write_register (iolink, REG_IOStCfgA + ch, iostcfg_val);
+
+}
+
 
 static void iolink_pl_max14819_pl_handler (iolink_hw_drv_t * iolink_hw, void * arg)
 {
@@ -764,18 +828,59 @@ static void iolink_pl_max14819_pl_handler (iolink_hw_drv_t * iolink_hw, void * a
    }
 
    os_mutex_lock (iolink->exclusive);
-	 //printf("I>%d\n", ch);	
-   // Check if this chip has interrupted
-   // Read interrupt register
+   
+   // Read interrupt register (read-to-clear)
    reg = iolink_14819_read_register (iolink, REG_Interrupt);
 
-   // Trigger correct event(s)
+   // Check for status error
    if (reg & MAX14819_INTERRUPT_STATUS)
    {
       // TODO: Status error. Get error(s)
       LOG_ERROR (IOLINK_PL_LOG, "PL: Got status error\n");
    }
 
+   // Check channel specific flags
+   for (ch = 0; ch < MAX14819_NUM_CHANNELS; ch++)
+   {
+      if (reg & (MAX14819_INTERRUPT_TX_ERR_A << ch))
+      {
+         if (iolink->wurq_request[ch])
+         {
+            /* Silence possibly erroneous error
+             *
+             * The TransmErr bit is set while attempting to establish
+             * communication, causing a TxError interrupt. This would indicate
+             * that bits written to CQ line get corrupted. (See data sheet
+             * section "Transmit Loopback Check"). Looking at the CQ line
+             * using a logic analyser does not indicate that any corruption is
+             * going on however. The root cause of the issue is unknown.
+             * Given that the error seems erroneous, logging an error or warning
+             * message does not seem to be warranted.
+             */
+            iolink_max14819_clear_errors (iolink, ch);
+         }
+         else
+         {
+            os_event_set (iolink->dl_event[ch], IOLINK_PL_EVENT_TXERR);
+         }
+      }
+
+      if (reg & (MAX14819_INTERRUPT_RX_ERR_A << ch))
+      {
+         os_event_set (iolink->dl_event[ch], IOLINK_PL_EVENT_RXERR);
+      }
+      
+      if (reg & (MAX14819_INTERRUPT_RX_DATA_RDY_A << ch))
+      {
+         if (!iolink->data_ready[ch])
+         {
+            iolink->data_ready[ch] = true;
+         os_event_set (iolink->dl_event[ch], IOLINK_PL_EVENT_RXRDY);
+      }
+   }
+   }
+
+   // Process WURQ
    if (reg & MAX14819_INTERRUPT_WURQ)
    {
       bool completed_wurq = false;
@@ -800,33 +905,11 @@ static void iolink_pl_max14819_pl_handler (iolink_hw_drv_t * iolink_hw, void * a
 
       if (!completed_wurq)
       {
-         // TODO: WURQ-request interrupt, but no WURQ sent?
          LOG_ERROR (IOLINK_PL_LOG, "PL: Got WURQ, but no channel was handled\n");
       }
    }
 
-   // Check channel specific flags
-   for (ch = 0; ch < MAX14819_NUM_CHANNELS; ch++)
-   {
-      if (reg & (MAX14819_INTERRUPT_TX_ERR_A << ch))
-      {
-         os_event_set (iolink->dl_event[ch], IOLINK_PL_EVENT_TXERR);
-      }
-      if (reg & (MAX14819_INTERRUPT_RX_ERR_A << ch))
-      {
-         os_event_set (iolink->dl_event[ch], IOLINK_PL_EVENT_RXERR);
-      }
-      if (reg & (MAX14819_INTERRUPT_RX_DATA_RDY_A << ch))
-      {
-         if (!iolink->data_ready[ch])
-         {
-            iolink->data_ready[ch] = true;
-          os_event_set (iolink->dl_event[ch], IOLINK_PL_EVENT_RXRDY);
-         }
-      }
-   }
    os_mutex_unlock (iolink->exclusive);
-	 //printf("I<%d\n", ch);	
 }
 
 
@@ -845,6 +928,8 @@ static void iolink_pl_max14819_pl_handler (iolink_hw_drv_t * iolink_hw, void * a
       .init_sdci           = iolink_pl_max14819_init_sdci,
       .configure_event     = iolink_pl_max14819_configure_event,
       .pl_handler          = iolink_pl_max14819_pl_handler,
+      .read_di             = iolink_pl_max14819_sio_read_di,
+      .write_do            = iolink_pl_max14819_sio_set_do,
 			.set_power           = iolink_pl_max14819_set_power,
 			.set_led             = iolink_pl_max14819_set_led,
 			.get_status          = iolink_pl_max14819_get_status,
@@ -892,7 +977,7 @@ iolink_hw_drv_t * iolink_14819_init (const iolink_14819_cfg_t * cfg)
    if (!(rev == MAX14819_REVID_MAX14819 ||
          rev == MAX14819_REVID_MAX14819A))
    {
-      LOG_ERROR (IOLINK_PL_LOG, "PL: Unsupported chip revision: 0x%02x\n", rev);
+      LOG_ERROR (IOLINK_PL_LOG, "PL: Unsupported chip revision : 0x%02x or cannot read chip revision (is the MAX14819 connected?)\n", rev);
       os_mutex_destroy(iolink->exclusive);
       _iolink_pl_hw_spi_close(iolink->fd_spi);
       free (iolink);
@@ -912,7 +997,6 @@ iolink_hw_drv_t * iolink_14819_init (const iolink_14819_cfg_t * cfg)
    // Stop cycle timer (if activated)
    for (ch = 0; ch < MAX14819_NUM_CHANNELS; ch++)
    {
-		 
       iolink_14819_write_register (iolink, REG_CQCtrlA + ch, 0x00);
    }
 
@@ -936,17 +1020,18 @@ iolink_hw_drv_t * iolink_14819_init (const iolink_14819_cfg_t * cfg)
       iolink_14819_write_register (iolink, REG_ChanStatA + ch, 0x00);
    }
 	 
-	 
    iolink_14819_write_register (iolink, REG_CQCfgA, cfg->CQCfgA);
-	 LOG_DEBUG (IOLINK_PL_LOG, "*1\n");
-   iolink_14819_write_register (iolink, REG_LPCnfgA, cfg->LPCnfgA);
-	 LOG_DEBUG (IOLINK_PL_LOG, "*2\n");
-   iolink_14819_write_register (iolink, REG_IOStCfgA, cfg->IOStCfgA);
-   iolink_14819_write_register (iolink, REG_CQCtrlA, cfg->CQCtrlA);
    iolink_14819_write_register (iolink, REG_CQCfgB, cfg->CQCfgB);
-   iolink_14819_write_register (iolink, REG_LPCnfgB, cfg->LPCnfgB);
-   iolink_14819_write_register (iolink, REG_IOStCfgB, cfg->IOStCfgB);
-   iolink_14819_write_register (iolink, REG_CQCtrlB, cfg->CQCtrlB);
+
+	iolink_14819_write_register (iolink, REG_LPCnfgA, cfg->LPCnfgA);
+	iolink_14819_write_register (iolink, REG_LPCnfgB, cfg->LPCnfgB);
+
+	 
+	iolink_14819_write_register (iolink, REG_IOStCfgA, cfg->IOStCfgA);
+	iolink_14819_write_register (iolink, REG_CQCtrlA, cfg->CQCtrlA);	
+ 
+	iolink_14819_write_register (iolink, REG_IOStCfgB, cfg->IOStCfgB);
+	iolink_14819_write_register (iolink, REG_CQCtrlB, cfg->CQCtrlB);
 
    // Reset interrupt register
    iolink_14819_read_register (iolink, REG_Interrupt);
@@ -999,21 +1084,73 @@ void iolink_14819_isr (void * arg)
    }
 }
 
-void iolink_pl_max14819_set_power(iolink_hw_drv_t * iolink_hw, uint8_t _port, bool _power)
+void iolink_pl_max14819_set_power(iolink_hw_drv_t * iolink_hw, uint8_t _port, bool _power, uint16_t _delay_current_limit)
 {
 	if (_port > 1)
 		return;
 	
 	iolink_14819_drv_t * iolink = (iolink_14819_drv_t *)iolink_hw;
 	
-	os_mutex_lock (iolink->exclusive);	 
-			 
-	uint8_t myLPCnfgAValue = 0x00;
+	os_mutex_lock (iolink->exclusive);
+	
+	uint8_t myLPCnfgValueOrig =  iolink_14819_read_register (iolink, REG_LPCnfgA+_port);
+	uint8_t myLPCnfgValueNew = myLPCnfgValueOrig; 
 		
 	if (_power == true)
-		myLPCnfgAValue = 0x01;
+		myLPCnfgValueNew |= 0x01;
 		
-	iolink_14819_write_register (iolink, REG_LPCnfgA+_port, myLPCnfgAValue);	
+	else
+		myLPCnfgValueNew &= ~0x01;
+	
+	// Wait time --> Disable current limit, then enable
+	
+	LOG_DEBUG (IOLINK_PL_LOG, "myLPCnfgValueOrig=%02x\n", myLPCnfgValueOrig);
+	
+	if ((_delay_current_limit > 0) && (_power==true))
+	{
+		// Set original value + disable current monitoring
+		uint8_t myLPCnfgValueTemp = myLPCnfgValueOrig | 0x02;
+		iolink_14819_write_register (iolink, REG_LPCnfgA+_port, myLPCnfgValueTemp);
+		
+		// Wait 20ms
+		os_usleep(20*1000);
+		
+		// Set new value (PWR enabled) + disable current monitoring
+		myLPCnfgValueTemp = myLPCnfgValueNew | 0x02;
+		iolink_14819_write_register (iolink, REG_LPCnfgA+_port, myLPCnfgValueTemp);		
+		
+		uint16_t myDelayTime =  _delay_current_limit;
+		LOG_DEBUG (IOLINK_PL_LOG, "iolink_pl_max14819_set_power: delay_current_limit[us] = %d \n", myDelayTime);
+		
+		LOG_DEBUG (IOLINK_PL_LOG, "temporary myLPCnfgValueTemp = %02x\n", myLPCnfgValueTemp);
+		
+		iolink_14819_write_register (iolink, REG_LPCnfgA+_port, myLPCnfgValueTemp);
+
+		struct timeval tv;
+    struct tm *tm_info;
+    char buffer[26];
+    
+    gettimeofday(&tv, NULL);
+    tm_info = localtime(&tv.tv_sec);
+    
+    strftime(buffer, 26, "%Y-%m-%d %H:%M:%S", tm_info);
+    LOG_DEBUG (IOLINK_PL_LOG, "START >> %s.%03ld\n", buffer, tv.tv_usec / 1000);
+		
+		uint32_t myDelayUS = myDelayTime*1000;
+
+		LOG_DEBUG (IOLINK_PL_LOG, "sleep %ul us\n", myDelayUS);
+		
+
+		os_usleep (myDelayUS);
+		
+		gettimeofday(&tv, NULL);
+		tm_info = localtime(&tv.tv_sec);
+    
+    strftime(buffer, 26, "%Y-%m-%d %H:%M:%S", tm_info);
+    LOG_DEBUG (IOLINK_PL_LOG, "END >> %s.%03ld\n", buffer, tv.tv_usec / 1000);		
+	}
+	
+	iolink_14819_write_register (iolink, REG_LPCnfgA+_port, myLPCnfgValueNew);	
 	
 	os_mutex_unlock (iolink->exclusive);	 
 }
@@ -1057,7 +1194,7 @@ void iolink_pl_max14819_set_led(iolink_hw_drv_t * iolink_hw, uint8_t _port, bool
 	os_mutex_unlock (iolink->exclusive);
 }
 
-void iolink_pl_max14819_get_status(iolink_hw_drv_t * iolink_hw, uint8_t _port, bool *_power, uint8_t *_baudrate)
+void iolink_pl_max14819_get_status(iolink_hw_drv_t * iolink_hw, uint8_t _port, bool *_power, uint8_t *_baudrate, uint8_t *_error)
 {
 	if (_port > 1)
 		return;
@@ -1067,6 +1204,7 @@ void iolink_pl_max14819_get_status(iolink_hw_drv_t * iolink_hw, uint8_t _port, b
 	
 	uint8_t myStatusRegister = iolink_14819_read_register (iolink, REG_LPCnfgA+_port);
 	uint8_t myBaudrateRegister = iolink_14819_read_register (iolink, REG_CQCtrlA+_port);
+	uint8_t myErrorRegister = iolink_14819_read_register (iolink, REG_ChanStatA+_port);
 
 	*_baudrate = (myBaudrateRegister>>6) & 0x03;
 	
@@ -1079,6 +1217,8 @@ void iolink_pl_max14819_get_status(iolink_hw_drv_t * iolink_hw, uint8_t _port, b
 	{
 		*_power = 0;
 	}
+	
+	*_error = myErrorRegister & 0x07;
 	os_mutex_unlock (iolink->exclusive);
 }
 

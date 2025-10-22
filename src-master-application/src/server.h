@@ -20,6 +20,7 @@ extern std::mutex cv_m1;
 extern os_mutex_t *mtx_cmd0;
 extern os_mutex_t *mtx_cmd1;
 
+extern uint16_t  delay_current_limit;
 
 
 #define CMD_EMPTY 			0
@@ -32,6 +33,7 @@ extern os_mutex_t *mtx_cmd1;
 #ifdef HISTORY
 #define CMD_PD_HISTORY	7
 #endif
+#define CMD_STATUS2 		8
 
 
 typedef struct {
@@ -67,6 +69,8 @@ typedef struct {
 	uint16_t vendorId;
 	uint32_t deviceId;
 	uint8_t power;
+	
+	uint8_t error;
 } __attribute__((__packed__)) iolStatus;
 
 

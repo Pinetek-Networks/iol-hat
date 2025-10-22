@@ -323,10 +323,10 @@ typedef struct iolink_dl
    os_timer_t * timer_tcyc;
    bool timer_tcyc_elapsed;
 
-   bool dataready;
-   bool rxerror;
-   bool txerror;
-   bool rxtimeout;
+   volatile bool dataready;
+   volatile bool rxerror;
+   volatile bool txerror;
+   volatile bool rxtimeout;
 
 #if IOLINK_HW == IOLINK_HW_MAX14819
    bool first_read_min_cycl;

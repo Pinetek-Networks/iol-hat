@@ -210,7 +210,7 @@ static uint8_t iolink_config_port_dido (iolink_app_port_ctx_t * app_port, bool d
       return 1;
    }
 
-	LOG_DEBUG (LOG_STATE_ON, "%s: finished successfully\n", __func__);
+		LOG_DEBUG (LOG_STATE_ON, "%s: finished successfully\n", __func__);
    return 0;
 }
 
@@ -342,7 +342,7 @@ static void iolink_retry_estcom (os_timer_t * tmr, void * arg)
 
 void iolink_handler (iolink_m_cfg_t m_cfg)
 {
-	printf ("iolink_handler ... \n");
+	 LOG_INFO(IOLINK_PL_LOG, "iolink_handler ... \n");
 
    long unsigned int i;
    os_event_t * app_event = os_event_create();
@@ -409,13 +409,12 @@ void iolink_handler (iolink_m_cfg_t m_cfg)
       }
    }
 
-	//iolink_14819_write_register (iolink, REG_LPCnfgA, cfg->LPCnfgA);
-		
+			
    while (true)
    {
       uint32_t event_value;
 			
-			//printf ("w\n");
+			
 
       if (!os_event_wait (iolink_app_master.app_event, 0xFFFFFFFF, &event_value, 1000))
       {
@@ -438,7 +437,7 @@ void iolink_handler (iolink_m_cfg_t m_cfg)
 
             if (((EVENT_PORTE_0 << i) & event_value) != 0)
             {
-							printf("EVENT_PORTE_0\n");
+							 //printf("EVENT_PORTE_0\n");
                if (app_port->app_port_state == IOL_STATE_STARTING)
                {
                   if (iolink_start_port (app_port) != 0)
@@ -732,7 +731,7 @@ static void SMI_cnf_cb (
 	 }
    case IOLINK_ARG_BLOCK_ID_PD_IN_OUT:
       /* SMI_PDInOut_cnf */
-      LOG_DEBUG (LOG_STATE_ON, "%s: IOLINK_ARG_BLOCK_ID_PD_IN_OUT\n", __func__);
+      //LOG_DEBUG (LOG_STATE_ON, "%s: IOLINK_ARG_BLOCK_ID_PD_IN_OUT\n", __func__);
       break;
    case IOLINK_ARG_BLOCK_ID_MASTERIDENT:
 	 {
@@ -824,6 +823,6 @@ iolink_smi_errortypes_t wait_for_cnf (
       }
    }
 
-	LOG_DEBUG (LOG_STATE_ON, "%s: finished; error = %d\n", __func__, errortype);
+		LOG_DEBUG (LOG_STATE_ON, "%s: finished; error = %d\n", __func__, errortype);
    return errortype;
 }

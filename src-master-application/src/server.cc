@@ -28,6 +28,8 @@ os_mutex_t *mtx_cmd1;
 iolCmd cmd0, cmd1;
 iolStatus status[PORT_NUMBER];
 
+uint16_t  delay_current_limit;
+
 
 void *runServer (void *_arg)
 {	
@@ -83,6 +85,7 @@ void *runServer (void *_arg)
 	#define RET_ERROR_PWR 0x03
 	#define RET_ERROR_PORT_ID 0x04
 	#define RET_ERROR_INTERNAL 0x05
+	#define RET_ERROR_MODE 0x06
 		
 	while (1)
 	{
@@ -139,18 +142,17 @@ void *runServer (void *_arg)
 			uint8_t myPort = buffer[1];
 			LOG_DEBUG(IOLINK_PL_LOG, "1\n");
 			iolink_app_port_ctx_t * app_port = &iolink_app_master.app_port[buffer[1]];
-			LOG_DEBUG(IOLINK_PL_LOG, "app_port=%p\n", app_port);
+			//LOG_DEBUG(IOLINK_PL_LOG, "app_port=%p\n", app_port);
 			LOG_DEBUG(IOLINK_PL_LOG, "buffer[0]=%d\n", buffer[0]);
 			// Switch CMD
 			switch (buffer[0])
 			{
-				LOG_DEBUG(IOLINK_PL_LOG, "CMD_PWR\n");
 				// Power
 				case CMD_PWR:
 				// [CMD] [port] [status]
 				// Returns [CMD] [port] [status]
 				{
-					LOG_DEBUG(IOLINK_PL_LOG, "CMD_PWR");
+					LOG_DEBUG(IOLINK_PL_LOG, "CMD_PWR\n");
 					if (valread != 3)
 					{
 						LOG_ERROR(IOLINK_PL_LOG, "ERROR: CMD_PWR len\n");
@@ -167,11 +169,8 @@ void *runServer (void *_arg)
 						break;
 					}
 					
-					LOG_DEBUG(IOLINK_PL_LOG, "iolink_hw=%p\n", socketArgs->iolink_hw);
-					LOG_DEBUG(IOLINK_PL_LOG, "iolink_pl_max14819_set_power=%p\n", socketArgs->iolink_hw->ops->set_power);
-					
 					// Set the power
-					socketArgs->iolink_hw->ops->set_power(socketArgs->iolink_hw, (uint8_t) buffer[1], (bool) buffer[2]);
+					socketArgs->iolink_hw->ops->set_power(socketArgs->iolink_hw, (uint8_t) buffer[1], (bool) buffer[2], delay_current_limit);
 					// Return status
 					send(newSocket, buffer, 3, 0);						
 				}
@@ -255,10 +254,33 @@ void *runServer (void *_arg)
 					myCmd->lenOut = buffer [2];
 					myCmd->lenIn = buffer[3];
 					
-					memcpy(myCmd->dataOut, &buffer[4], myCmd->lenOut);
-					memcpy(&buffer[4], myCmd->dataIn, myCmd->lenIn);
-					
-					buffer[3] = myCmd->lenIn;						
+					// Is IO-Link running
+					if (app_port->app_port_state == IOL_STATE_RUNNING)
+					{
+						memcpy(myCmd->dataOut, &buffer[4], myCmd->lenOut);
+						memcpy(&buffer[4], myCmd->dataIn, myCmd->lenIn);
+						buffer[3] = myCmd->lenIn;
+					}
+					else
+					{
+						// If IO-Link is not running we are in SIO mode
+						bool pdin_valid = false;
+						int8_t readLen = do_smi_pdin(app_port, &pdin_valid, myCmd->dataIn);
+						if (readLen > 0)
+						{
+							memcpy(&buffer[4], myCmd->dataIn, readLen);
+							buffer[3] = readLen;
+						}
+						else if (myCmd->lenOut > 0)
+						{
+							memcpy(myCmd->dataOut, &buffer[4], myCmd->lenOut);
+							uint8_t rc = do_smi_pdout(app_port, true, 1, myCmd->dataOut);
+							if (rc != 0)
+							{
+								LOG_WARNING(LOG_STATE_ON, "%s: Failed to set DO on port %u\n", __func__, app_port->portnumber);
+							}
+						}
+					}
 					send(newSocket, buffer, myCmd->lenIn+4, 0);
 					
 					os_mutex_unlock (myMutex);
@@ -270,6 +292,7 @@ void *runServer (void *_arg)
 				#ifdef HISTORY
 				//Process data with history
 				case CMD_PD_HISTORY: 
+			
 				// [CMD] [port] [LenOut] [LenIn] [DataOut..]
 				// Returns [CMD] [port] [LenOut] [LenIn] [HistoryCount] [DataIn...] [DataInHistory..]
 				{					
@@ -310,35 +333,97 @@ void *runServer (void *_arg)
 					}
 
 					os_mutex_lock (myMutex);
-									
-					// Zero out structure
-					memset(myCmd->dataOut, 0x00, sizeof (myCmd->dataOut));
 					
-					myCmd->command = CMD_PD;
-					myCmd->port = myPort;
-					
-					myCmd->lenOut = buffer [2];
-					myCmd->lenIn = buffer[3];
-					
-					// Copy to command for PD_OUT
-					memcpy(myCmd->dataOut, &buffer[4], myCmd->lenOut);
-					
-					// Copy queue (includes last PD_IN)
-					uint8_t myPos = 0;
-					
-					for (const auto& item : *myQueue)
+					// Is IO-Link running
+					if (app_port->app_port_state == IOL_STATE_RUNNING)
 					{
-						memcpy(&buffer[5+((myPos)*myCmd->lenIn)], item.data_in, myCmd->lenIn);
-						myPos++;
+					// Zero out structure
+						memset(myCmd->dataOut, 0x00, sizeof (myCmd->dataOut));
+						
+						myCmd->command = CMD_PD;
+						myCmd->port = myPort;
+						
+						myCmd->lenOut = buffer [2];
+						myCmd->lenIn = buffer[3];
+						
+						// Copy to command for PD_OUT
+						memcpy(myCmd->dataOut, &buffer[4], myCmd->lenOut);
+						
+						// Copy queue (includes last PD_IN)
+						uint8_t myPos = 0;
+						
+						for (const auto& item : *myQueue)
+						{
+							memcpy(&buffer[5+((myPos)*myCmd->lenIn)], item.data_in, myCmd->lenIn);
+							myPos++;
+						}
+						
+						buffer[3] = myCmd->lenIn;						
+						buffer[4] = myQueue->size();
+						
+						// Len is 5 + Current PD IN + History PD_IN
+						send(newSocket, buffer, 5+ myQueue->size()*myCmd->lenIn, 0);
+						
+						myQueue->clear();					
 					}
 					
-					buffer[3] = myCmd->lenIn;						
-					buffer[4] = myQueue->size();
+					// If IO-Link is not running we are in SIO mode
+					else 
+					{
+						int len = 0;
+			
+						// [CMD] [port] [LenOut] [LenIn] [DataOut..]
+						// Returns [CMD] [port] [LenOut] [LenIn] [HistoryCount] [DataIn...] [DataInHistory..]
 					
-					// Len is 5 + Current PD IN + History PD_IN
-					send(newSocket, buffer, 5+ myQueue->size()*myCmd->lenIn, 0);
-					
-					myQueue->clear();					
+						// Can be either IN or OUT
+						
+						myCmd->command = CMD_PD;
+						myCmd->port = myPort;
+						
+						myCmd->lenOut = buffer [2];
+						myCmd->lenIn = buffer[3];
+						
+						
+						// IN 
+						if (myCmd->lenIn  > 0)
+						{
+							bool pdin_valid = false;
+											
+							int8_t readLen = do_smi_pdin(app_port, &pdin_valid, myCmd->dataIn);
+							printf("Read len= %d\n ", readLen);
+							if (readLen > 0)
+							{
+								memcpy(&buffer[5], myCmd->dataIn, readLen);
+								buffer[3] = readLen;
+								buffer[4] = 1; // Count is always a (no history for DI/DO)
+								len = 6;
+							}
+						}
+						
+						// OUT
+						else if (myCmd->lenOut > 0)
+						{
+							memcpy(myCmd->dataOut, &buffer[4], myCmd->lenOut);
+							
+							uint8_t rc = do_smi_pdout(app_port, true, 1, myCmd->dataOut);
+							if (rc != 0)
+							{
+								LOG_WARNING(LOG_STATE_ON, "%s: Failed to set DO on port %u\n", __func__, app_port->portnumber);
+							}
+							buffer[4] = 0; // Count is always 0 (no history for DI/DO)
+							len = 5;
+						}
+						
+						printf("Buffer out (%d bytes): ", len);
+						for(int i = 0; i < len; i++) {
+								printf("%02x ", (unsigned char)buffer[i]);
+						}
+						printf("\n");
+						send(newSocket, buffer, len, 0);
+	
+					}					
+									
+	
 					os_mutex_unlock (myMutex);
 				}
 								
@@ -407,7 +492,7 @@ void *runServer (void *_arg)
 					LOG_DEBUG(IOLINK_PL_LOG, "CMD_WRITE\n");
 					
 					if (
-						(valread < 7) || // 7 is minimum for 1 octet of write data
+						(valread < 6) || // 7 is minimum for 0 octet of write data
 						(valread != buffer[5] + 6) // Len + overhead
 					)
 					{
@@ -459,9 +544,21 @@ void *runServer (void *_arg)
 				
 				
 				case CMD_STATUS:
+				case CMD_STATUS2:
 				{
-					// [CMD] [port]					
-					LOG_DEBUG(IOLINK_PL_LOG, "CMD_STATUS\n");
+					
+					if (buffer[0] == CMD_STATUS)
+					{
+						// [CMD] [port]					
+						LOG_DEBUG(IOLINK_PL_LOG, "CMD_STATUS\n");
+					}
+					
+					else
+					{
+						// [CMD] [port]					
+						LOG_DEBUG(IOLINK_PL_LOG, "CMD_STATUS2\n");
+					}
+
 					
 					if (valread != 2)
 					{
@@ -482,8 +579,9 @@ void *runServer (void *_arg)
 					bool myPower; 
 					uint8_t myBaudrate;
 					uint8_t myPort = buffer[1];
+					uint8_t myError;
 					
-					socketArgs->iolink_hw->ops->get_status(socketArgs->iolink_hw, myPort, &myPower, &myBaudrate);
+					socketArgs->iolink_hw->ops->get_status(socketArgs->iolink_hw, myPort, &myPower, &myBaudrate, &myError);
 					iolink_port_t *myPort_t  = iolink_get_port (iolink_app_master.master, app_port->portnumber);
 					
 					uint8_t myPortStatus =  app_port->app_port_state;
@@ -504,10 +602,10 @@ void *runServer (void *_arg)
 					uint8_t myCycletime = 0;
 
 					// Check if cycle time can be determined
-					if ((myPort == 0) && (mode_ch_0 == iolink_mode_SDCI))
+					if ((myPort == 0) && (mode_ch[0] == iolink_mode_SDCI))
 								myCycletime = iolink_pl_get_cycletime(myPort_t);
 								
-					if ((myPort == 1) && (mode_ch_1 == iolink_mode_SDCI))
+					if ((myPort == 1) && (mode_ch[1] == iolink_mode_SDCI))
 								myCycletime = iolink_pl_get_cycletime(myPort_t);
 
 					status[myPort].masterCycleTime = myCycletime;
@@ -516,6 +614,7 @@ void *runServer (void *_arg)
 
 					status[myPort].vendorId = port_status->vendorid;
 					status[myPort].deviceId = port_status->deviceid;
+					status[myPort].error = myError;
 					
 					LOG_DEBUG(LOG_STATE_ON, "port=%d\n", myPort);
 					LOG_DEBUG(LOG_STATE_ON, "pdInValid=%d\n", status[myPort].pdInValid);
@@ -528,10 +627,21 @@ void *runServer (void *_arg)
 					LOG_DEBUG(LOG_STATE_ON, "deviceId=0x%X\n", status[myPort].deviceId);
 					LOG_DEBUG(LOG_STATE_ON, "power=%d\n", status[myPort].power);
 					
+					int mySize = sizeof(iolStatus);
+								
+					if (buffer[0] == CMD_STATUS)
+					{
+						mySize = sizeof(iolStatus)-1;  // -1 due to missing error byte
+					}
 					
-					memcpy(&buffer[2], &status[myPort], sizeof(iolStatus));
-					
-					send(newSocket, buffer, 2+sizeof(iolStatus),0);		
+					else // CMD_STATUS2
+					{
+						LOG_DEBUG(LOG_STATE_ON, "error=%d\n", status[myPort].error);
+					}					
+
+					memcpy(&buffer[2], &status[myPort], mySize);	
+					send(newSocket, buffer, 2+mySize,0); 
+
 				}
 				break;
 				

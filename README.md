@@ -44,12 +44,20 @@ To work properly, the master application needs to be started **AFTER** 24V power
 
 The configuration of the Master Application (iol-hat-appl) is done over command line arguments:
 ```
-  -h, --help      shows help message and exits 
-  -v, --version   prints version information and exits 
-  -e, --extclock  Use clock for MAX14819 from ext source (not used for IOL HAT)
-  -r, --realtime  Run realtime on given kernel (requires root rights, see manual) 
-  -i, --iolport   Specify the IOL port (12/34) (based on jumper settings on the hardware, see manual), usage e.g., -i 34 for IOL port 3-4.
-  -t, --tcpport   Specify the TCP port, usage -t 1234 for port 1234. Standard ports are 12010 for IOL port 1-2, and 12011 for IOL port 3-4
+  -h, --help               shows help message and exits 
+  -v, --version            prints version information and exits 
+  -m0, --mode0             Operating Mode Port 0 (X1), Possible values 0: IOL, 1: DI, 2: DO, 3: OFF 
+  -m1, --mode1             Operating Mode Port 1 (X2), Possible values 0: IOL, 1: DI, 2: DO, 3: OFF 
+  -di0, --di-mode0         DI Configuration Port 0 (X1) 
+  -di1, --di-mode1         DI Configuration Port 1 (X2) 
+  -do0, --do-mode0         DO Configuration Port 0 (X1) 
+  -do1, --do-mode1         DO Configuration Port 1 (X2) 
+  -e, --extclock           Use clock for MAX14819 from ext source 
+  -d, --delaycurrentlimit  Delay time in ms for current limit enabling after port enable, range [1..1500]. Please note that using this you need to limit the drawn current to 1,5A.  
+  -b, --blankingtime       Blanking time setting 0=short...3=long for capacitive loads 
+  -r, --realtime           Run realtime on given kernel (requires root rights, see manual) 
+  -i, --iolport            Specify the IOL port, possible values 12 and 34) 
+  -t, --tcpport            Specify the TCP port
 ```
 **Timing considerations:**
 IO-Link is a real-time protocol that requires fast response and cycle times to not run into timeouts. For running with sensors etc. that are queried 1-2 times per second, those timeouts are not crititcal. The iol-hat Master Application can run as user without further considerations.
