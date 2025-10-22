@@ -65,9 +65,6 @@ make clean
 ```
 
 After build, you can use the **iol-master-appl** binary in the "bin/release" or in "bin/debug" folder, depending on the selected build. The application can now be started with the options as described on the main page.
-<<<<<<< HEAD
 =======
 After build, you can use the **iol-master-appl** binary with the options as described on the main page.
 
-=======
->>>>>>> 52eb66c4d44e928ead85bf7032047e37b0987eef

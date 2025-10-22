@@ -207,6 +207,7 @@ int main (int argc, char ** argv)
 	program.add_argument("-m1", "--mode1").store_into(myMode[1])
 	.help("Operating Mode Port 1 (X2), Possible values 0: IOL, 1: DI, 2: DO, 3: OFF");
 	
+	#if 0
 	int myDIMode[] = {-1,-1};
 	program.add_argument("-di0", "--di-mode0").store_into(myDIMode[0])
 	.help("DI Configuration Port 0 (X1)");
@@ -219,8 +220,10 @@ int main (int argc, char ** argv)
 	program.add_argument("-do0", "--do-mode0").store_into(myDOMode[0])
 	.help("DO Configuration Port 0 (X1)");
 			
+	
 	program.add_argument("-do1", "--do-mode1").store_into(myDOMode[1])
 	.help("DO Configuration Port 1 (X2)");				
+	#endif
 		
 	int myExtClock = -1;
 	program.add_argument("-e", "--extclock")
@@ -307,7 +310,9 @@ int main (int argc, char ** argv)
 			case 1:
 				mode_ch[i] = iolink_mode_DI;
 				
-				LOG_DEBUG  (IOLINK_PL_LOG, "Channel %d --> iolink_mode_DI, myDIMode=%d\n", i, myDIMode[i]);				
+				LOG_DEBUG  (IOLINK_PL_LOG, "Channel %d --> iolink_mode_DI\n",i);
+				#if 0
+				LOG_DEBUG  (IOLINK_PL_LOG, "myDIMode=%d\n", myDIMode[i]);				
 				switch (myDIMode[i])
 				{					
 					case 0: 
@@ -325,13 +330,19 @@ int main (int argc, char ** argv)
 						exit (-1);
 						break;
 				}
+				#else
+				CQCfgA_DI[i]=	 MAX14819_CQCFG_SINKSEL(MAX14819_CQCFG_SINK_SRC_5MA) | MAX14819_CQCFG_DRVDIS	;
+				#endif
 				
 				
 				LOG_DEBUG  (IOLINK_PL_LOG, "Channel %d --> CQCfgA_DI=%02x\n",i,CQCfgA_DI[i]);
 			break;
 			case 2: 
 				mode_ch[i] = iolink_mode_DO;
-				LOG_DEBUG  (IOLINK_PL_LOG, "Channel %d --> iolink_mode_DO, myDOMode=%d\n", i, myDOMode[i]);				
+				
+				LOG_DEBUG  (IOLINK_PL_LOG, "Channel %d --> iolink_mode_DO\n", i);
+				#if 0
+				LOG_DEBUG  (IOLINK_PL_LOG, "myDOMode=%d\n", myDOMode[i]);				
 				switch (myDOMode[i])
 				{
 					case 0:
@@ -353,6 +364,10 @@ int main (int argc, char ** argv)
 							break;
 						
 					}
+					#else
+					CQCfgA_DO[i]=	 MAX14819_CQCFG_PUSHPUL; // Default Push-Pull 500mA
+					#endif 
+					
 					LOG_DEBUG  (IOLINK_PL_LOG, "Channel %d --> CQCfgA_DO=%02x\n",i,CQCfgA_DO[i]);
 					
 				break;
