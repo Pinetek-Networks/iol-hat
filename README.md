@@ -1,5 +1,5 @@
 # IOL HAT
-Software repository for IOL HAT, an Raspberry Pi extension for IO-Link communication
+Software repository for IOL HAT, an Raspberry Pi extension for IO-Link communication: https://www.pinetek-networks.com/iol-hat
 
 ![IOL HAT RPi (600 x 400 px)](https://github.com/user-attachments/assets/e64add7d-45a9-483a-b5c1-e328c57330e8)
 
@@ -37,7 +37,10 @@ sudo apt install gpiod
 ```
 # IOL HAT usage and examples
 To communicate with the IO-Link devices, start the Master Application (iol-master-appl) and then your application. Using the examples is a good starting point to develop your application.
-Further information especially on the TCP communication can be found in the IOL HAT datasheet on the webpage: [pinetek-networks.com/en/iol-hat](https://pinetek-networks.com/en/iol-hat/)
+Further information especially on the TCP communication can be found here:
+* IOL HAT webpage: https://pinetek-networks.com/en/iol-hat (IOL HAT product page)
+* IOL HAT manuals (software and hardware): https://download.pinetek-networks.com/iol-hat/doc (IOL HAT manual download)
+* IOL HAT Knowledge Base: [https://doc.pinetek-networks.com/knowledge-base/iol-hat](https://doc.pinetek-networks.com/doku.php?id=iol-hat:start) (IOL HAT online manual)
 
 **Important note:**
 To work properly, the master application needs to be started **AFTER** 24V power is applied. Failure to do so will result in broken IO-Link communication.
@@ -60,15 +63,15 @@ The configuration of the Master Application (iol-hat-appl) is done over command 
   -t, --tcpport            Specify the TCP port
 ```
 **Timing considerations:**
-IO-Link is a real-time protocol that requires fast response and cycle times to not run into timeouts. For running with sensors etc. that are queried 1-2 times per second, those timeouts are not crititcal. The iol-hat Master Application can run as user without further considerations.
-If timeouts are critical (e.g., when HMI devices are connected that would change screen when timeouts occur), it is recommended to run the iol-hat in realtime mode. The solution is based on this description: https://forums.raspberrypi.com/viewtopic.php?t=228727
+IO-Link is a real-time protocol that requires fast response and cycle times to not run into timeouts. For running with sensors etc. that are queried 1-2 times per second, those timeouts are not crititcal. The  IOL Master Application iol-master-appl can run as user without further considerations.
+If timeouts are critical (e.g., when HMI devices are connected that would change screen when timeouts occur), it is recommended to run the iol-master-appl in realtime mode. The solution is based on this description: https://forums.raspberrypi.com/viewtopic.php?t=228727
 As preparation, one core needs to be reserved. This is done by adding the this argument to /boot/firmware/cmdline.txt (for older versions of Raspberry OS, the file is /boot/cmdline.txt):
 ```
 isolcpus=3
 ```
-where 3 is the core you want to reserve (can be 0..3). The core needs to be matching with the option that you are giving for iol-hat, e.g., for core 3 it would be 
+where 3 is the core you want to reserve (can be 0..3). The core needs to be matching with the option that you are giving for iol-master-appl, e.g., for core 3 it would be 
 ```
- iol-hat -r 3
+ iol-master-appl -r 3
 ```
 
 
