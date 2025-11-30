@@ -70,6 +70,10 @@ where 3 is the core you want to reserve (can be 0..3). The core needs to be matc
 ```
  iol-master-appl -r 3
 ```
+*Please note:* The parameters in cmdline.txt must be in one line only, example:
+```
+console=serial0,115200 console=tty1 root=PARTUUID=3ea976a4-02 rootfstype=ext4 fsck.repair=yes rootwait isolcpus=3 cfg80211.ieee80211_regdom=DE
+```
 
 
 # Build the Master Application
