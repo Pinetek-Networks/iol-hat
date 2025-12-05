@@ -62,7 +62,7 @@
 #include "argparse.h"
 
 // Defaults
-#define VERSION "1.4"
+#define VERSION "1.5a"
 
 
 #define DEFAULT_TCP_12	12010
@@ -527,7 +527,7 @@ int main (int argc, char ** argv)
 	iol_14819_0_cfg.chip_address   = 0,
 	
 	iol_14819_0_cfg.CQCfgA         = 0x02; //MAX14819_CQCFG_DRVDIS | MAX14819_CQCFG_SINKSEL(0x2),
-  iol_14819_0_cfg.LPCnfgA        = 0x02 | myBlankingTimeUInt8; //MAX14819_LPCNFG_LPEN,
+  iol_14819_0_cfg.LPCnfgA        = 0x00 | myBlankingTimeUInt8; //MAX14819_LPCNFG_LPEN,
   iol_14819_0_cfg.IOStCfgA       = 0x25; //MAX14819_IOSTCFG_DICSINK | MAX14819_IOSTCFG_DIEC3TH,
 	
 	iol_14819_0_cfg.CQCfgB         = 0x02; //MAX14819_CQCFG_DRVDIS | MAX14819_CQCFG_SINKSEL(0x2),

@@ -2031,7 +2031,7 @@ static void sm_DL_Read_cnf_cb (iolink_job_t * job)
    case IOL_DIR_PARAMA_MIN_CYCL:
    {
 #define MIN_CYCL_TIME_1   92
-#define MIN_CYCL_TIME_2_3 40
+#define MIN_CYCL_TIME_2_3 80
 #define FOUR_MS           40
 #define MIN_CYCL_TIME_32MS 0x80
 

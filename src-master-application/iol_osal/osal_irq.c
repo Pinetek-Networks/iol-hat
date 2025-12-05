@@ -72,6 +72,10 @@ uint8_t getRpiType()
     return 0;
 }
 
+// In the IRQ thread, we use polling instead of interrupts
+// This is due to test with the GPIOD trigger mechanism, that was firing interrupts 
+// quite erratically. The behavior can be checked with later versions of GPIOD
+
 static void * irq_thread (void * arg)
 {
 	irq_thread_t * irq = (irq_thread_t *)arg;
@@ -84,19 +88,28 @@ static void * irq_thread (void * arg)
    
 	while (1)
 	{
-      usleep(50);  // 50µs polling - faster than your original 100µs
+      usleep(50);  // 50µs polling, this is sufficient and does not create too high loads 
       
       myValue = gpiod_line_get_value(irq->line);
       
-      // Detect falling edge: HIGH → LOW transition
+      // Detect falling edge: HIGH to LOW transition
       if ((myValue == 0) && (myPreviousValue == 1))
 		{
          // Call ISR only once per falling edge
          irq->isr_func(irq->irq_arg);
+				 
+				 // After ISR, the line should be cleared. If another interrupt occured 
+				 // during the isr_func, the new value will be 0 again, but we would detect
+				 // no falling edge. Thus, set the previous value to 1. The isr_func is blocking.
+				 myPreviousValue = 1;
+				 
 		} 
 		
+			else
+			{      
       myPreviousValue = myValue;
 		}
+   }
 
 			gpiod_line_release(irq->line);
 			gpiod_chip_close(irq->chip);		
@@ -109,8 +122,6 @@ static pthread_t thread;
 
 int _iolink_setup_int (int gpio_pin, isr_func_t isr_func, void* irq_arg)
 {
-	
-	//LOG_DEBUG (IOLINK_PL_LOG, "_iolink_setup_int:>ptr=%p\n", irq_arg);
   pthread_attr_t attr;
    static irq_thread_t irqarg;
 	

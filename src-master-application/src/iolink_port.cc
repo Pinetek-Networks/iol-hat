@@ -307,7 +307,7 @@ static void generic_run1(iolink_app_port_ctx_t *app_port)
 
 void generic_setup0 (iolink_app_port_ctx_t * app_port)
 {
-	LOG_INFO (LOG_STATE_ON, "generic_setup0\n");
+	LOG_DEBUG (LOG_STATE_ON, "generic_setup0\n");
 	 do_smi_pdout (app_port, true, 0, NULL);
 
    app_port->run_function = generic_run0; 
@@ -317,7 +317,7 @@ void generic_setup0 (iolink_app_port_ctx_t * app_port)
 
 void generic_setup1 (iolink_app_port_ctx_t * app_port)
 {
-	LOG_INFO (LOG_STATE_ON, "generic_setup1\n");
+	LOG_DEBUG (LOG_STATE_ON, "generic_setup1\n");
 	 do_smi_pdout (app_port, true, 0, NULL);
 	 
 

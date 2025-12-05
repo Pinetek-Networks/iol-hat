@@ -255,7 +255,7 @@ static uint8_t iolink_14819_burst_read_rx (
    txdata[0] = MAX14819_COMMAND_READ |
                (iolink->chip_address << MAX14819_ADDR_OFFSET) |
                (rxtxreg << MAX14819_REGISTER_OFFSET);
-   _iolink_pl_hw_spi_transfer (iolink->fd_spi, rxdata, txdata, rxbytes + 2);
+   _iolink_pl_hw_spi_transfer (iolink->fd_spi, rxdata, txdata, rxbytes + 1);
    memcpy (data, &rxdata[1], rxbytes);
 
    return rxdata[0];
@@ -515,7 +515,7 @@ static bool iolink_pl_max14819_set_mode (
       iolink_14819_set_DI (iolink, ch, &iol_cfg);
       break;
    case iolink_mode_SDCI:
-      iolink_14819_write_register (iolink, REG_CQCtrlA + ch, 0x0C);
+      iolink_14819_write_register (iolink, REG_CQCtrlA + ch, 0x0C); //Reset Fifo RX/TX
       iolink_14819_write_register (iolink, REG_MsgCtrlA + ch, 0);
       iolink_14819_write_register (iolink, REG_ChanStatA + ch, 0);
       iolink_14819_write_register (iolink, REG_CQCfgA + ch, 0);
@@ -528,9 +528,10 @@ static bool iolink_pl_max14819_set_mode (
       iolink->wurq_request[ch] = false; /* Since we clear CQCTRL_EST_COM */
 
       iol_cfg.SDCI.IntE         = 0xFF;
-      iol_cfg.SDCI.msg_ctrl_val = 0x26;  /* InsChks = 1, RChksEn = 1, RMessageRdyEn = 1, TSizeEn = 1 */
+      iol_cfg.SDCI.msg_ctrl_val = 0x36;  /* InsChks = 1, RChksEn = 1, RMessageRdyEn = 1, TSizeEn = 1 */
       iol_cfg.SDCI.chan_stat_val = 0x40; /* FramerEn */
       iol_cfg.SDCI.cycl_tmr_val  = 0x00;
+			// 0xEF: Max timing, 0x60: Max BDelay, 0x0E: Max DDelay
       iol_cfg.SDCI.dev_del_val   = 0x1F; /* BDelay=2, DDelay=7, RpsnsTmrEn=1, sccording to MAX14819 datasheet, DDelay should be 1 for IO-Link compliance */
       iol_cfg.SDCI.trig_assg_val = 0x00;
       iol_cfg.SDCI.cq_ctrl_val   = 0x00; /* TxFifoRst and RxFifoRst to 0*/
@@ -634,7 +635,6 @@ static bool iolink_pl_max14819_get_data (
    uint8_t RxBytesAct = iolink_14819_read_register (iolink, reg);
    uint8_t rxbytes    = iolink_14819_read_register (iolink, lvlreg);
 
-	//	#warning check error handling
 
    if (RxBytesAct != rxbytes)
    {
@@ -829,8 +829,10 @@ static void iolink_pl_max14819_pl_handler (iolink_hw_drv_t * iolink_hw, void * a
 
    os_mutex_lock (iolink->exclusive);
    
-   // Read interrupt register (read-to-clear)
+	 // If interrupts occur during the processing, catch them as well
    reg = iolink_14819_read_register (iolink, REG_Interrupt);
+		 
+		 LOG_DEBUG(IOLINK_PL_LOG, "Interrupt; REG = %d\n", reg);
 
    // Check for status error
    if (reg & MAX14819_INTERRUPT_STATUS)
@@ -1055,31 +1057,46 @@ iolink_hw_drv_t * iolink_14819_init (const iolink_14819_cfg_t * cfg)
 
 void iolink_14819_isr (void * arg)
 {
-//	LOG_DEBUG (IOLINK_PL_LOG, "iolink_14819_isr:>>1\n");
-//	LOG_DEBUG (IOLINK_PL_LOG, "iolink_14819_isr:>ptr=%d\n", arg);
    iolink_14819_drv_t * iolink;
-//	 LOG_DEBUG (IOLINK_PL_LOG, "iolink_14819_isr:>>2\n");
    iolink = (iolink_14819_drv_t *)arg;
-//	 LOG_DEBUG (IOLINK_PL_LOG, "iolink_14819_isr:>>3\n");
-   uint8_t ch;
-//LOG_DEBUG (IOLINK_PL_LOG, "iolink_14819_isr:>>5\n");
-//LOG_DEBUG (IOLINK_PL_LOG, "iolink_14819_isr:>ptr=%d\n", iolink);
-   // Set main event to trigger iolink_main
-   for (ch = 0; ch < MAX14819_NUM_CHANNELS; ch++)
-   {
 		 
+   // Wake the handler for an ACTIVE channel (one with is_iolink set)
+   // Priority: Active channels first, then fallback to any initialized channel
+   // This ensures the correct handler processes all interrupts
 
-		 //LOG_DEBUG (IOLINK_PL_LOG, "iolink_14819_isr:>>5-%d\n", ch);
-      if (iolink->dl_event[ch] != NULL)
+   if (iolink->is_iolink[0] && iolink->dl_event[0] != NULL)
       {
-				//LOG_DEBUG (IOLINK_PL_LOG, "iolink_14819_isr:>>5a-%d\n", ch);
-         os_event_set (iolink->dl_event[ch], iolink->pl_flag);
-				 //LOG_DEBUG (IOLINK_PL_LOG, "iolink_14819_isr:>>5b-%d\n", ch);
+      // Channel 0 is active - wake its handler
+      LOG_DEBUG (IOLINK_PL_LOG, "iolink_14819_isr:>>5a-0\n");
+      os_event_set (iolink->dl_event[0], iolink->pl_flag);
+      LOG_DEBUG (IOLINK_PL_LOG, "iolink_14819_isr:>>5b-0\n");
       }
-   }
-   if ((iolink->dl_event[0] == NULL) && (iolink->dl_event[1] == NULL))
+   else if (iolink->is_iolink[1] && iolink->dl_event[1] != NULL)
    {
-      // DEBUG
+      // Channel 1 is active - wake its handler
+      LOG_DEBUG (IOLINK_PL_LOG, "iolink_14819_isr:>>5a-1\n");
+      os_event_set (iolink->dl_event[1], iolink->pl_flag);
+      LOG_DEBUG (IOLINK_PL_LOG, "iolink_14819_isr:>>5b-1\n");
+   }
+   else if (iolink->dl_event[0] != NULL)
+   {
+      // Fallback: No active channel yet, but ch 0 handler exists
+      // (happens during initialization or when both channels inactive)
+      LOG_DEBUG (IOLINK_PL_LOG, "iolink_14819_isr:>>5a-0 (fallback)\n");
+      os_event_set (iolink->dl_event[0], iolink->pl_flag);
+      LOG_DEBUG (IOLINK_PL_LOG, "iolink_14819_isr:>>5b-0 (fallback)\n");
+   }
+   else if (iolink->dl_event[1] != NULL)
+   {
+      // Fallback: ch 1 handler exists
+      LOG_DEBUG (IOLINK_PL_LOG, "iolink_14819_isr:>>5a-1 (fallback)\n");
+      os_event_set (iolink->dl_event[1], iolink->pl_flag);
+      LOG_DEBUG (IOLINK_PL_LOG, "iolink_14819_isr:>>5b-1 (fallback)\n");
+   }
+   else
+   {
+      // No handlers available at all
+      LOG_ERROR (IOLINK_PL_LOG, "iolink_14819_isr: No event handlers available\n");
       iolink->pl_flag = 0xBADBAD;
    }
 }

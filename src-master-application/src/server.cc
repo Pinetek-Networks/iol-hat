@@ -647,7 +647,7 @@ void *runServer (void *_arg)
 				
 				default:
 				{
-					LOG_ERROR(IOLINK_PL_LOG, "ERROR: function not supported\n");
+					LOG_ERROR(IOLINK_PL_LOG, "ERROR: function %d not supported\n", buffer[0]);
 					uint8_t myErrorMessage[] = {RET_ERROR, RET_ERROR_FUNC};
 					send(newSocket, myErrorMessage, 2, 0);
 					break;

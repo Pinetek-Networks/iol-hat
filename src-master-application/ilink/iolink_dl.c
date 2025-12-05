@@ -765,6 +765,35 @@ static void iolink_dl_mh_handle_com_lost (iolink_port_t * port)
       iolink_get_portnumber (port),
       iolink_dl_mh_st_literals[dl->message_handler.state]);
 
+		
+		// Reset state machine for connection retry (fix PN)
+
+#if IOLINK_HW == IOLINK_HW_MAX14819
+   PL_DisableCycleTimer (port);
+#endif
+
+   // Stop all timers
+   os_timer_stop (dl->timer);
+   os_timer_stop (dl->timer_tcyc);
+   
+   // Reset timer state
+   dl->timer_type = IOL_DL_TIMER_NONE;
+   dl->timer_elapsed = false;
+   dl->timer_tcyc_elapsed = false;
+   
+   // Clear error flags
+   dl->rxtimeout = false;
+   dl->rxerror = false;
+   dl->txerror = false;
+   
+   // Reset message handler state
+   dl->message_handler.retry = 0;
+   
+   // Signal mode handler
+   MHInfo_ind (dl, IOLINK_MHINFO_COMLOST);
+   dl->message_handler.rwcmd = IOL_MHRW_NONE;
+	 
+	 // PN fix end ====
    dl->message_handler.state = IOL_DL_MH_ST_INACTIVE_0;
    os_event_set (dl->event, IOLINK_DL_EVENT_MDH);
 }
@@ -1289,12 +1318,13 @@ static void iolink_dl_message_h_sm_await_reply16 (iolink_port_t * port)
          (dl->rxtimeout) ? "RXTimeout" : "RXError",
          iolink_get_portnumber (port));
 
-      if (dl->message_handler.retry >= IOLINK_MAX_RETRY) // T33
+			// Retry directly
+      //if (dl->message_handler.retry >= IOLINK_MAX_RETRY) // T33
       {
          iolink_dl_mh_handle_com_lost (port);
       }
 
-      dl->message_handler.retry++;
+      //dl->message_handler.retry++;
    }
    else
    {
@@ -3490,6 +3520,7 @@ static void dl_main (void * arg)
 
          if (dl->triggered_events & IOLINK_PL_EVENT_RXRDY)
          {
+						LOG_DEBUG(IOLINK_PL_LOG, " >>> rcv IOLINK_PL_EVENT_RXRDY\n");
             // Event handler for data ready
             if (iolink_pl_get_data (
                    port,

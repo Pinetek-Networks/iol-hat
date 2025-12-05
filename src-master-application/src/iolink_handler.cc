@@ -409,6 +409,7 @@ void iolink_handler (iolink_m_cfg_t m_cfg)
       }
    }
 
+	 static uint32_t event_count[IOLINK_NUM_PORTS] = {0};
 			
    while (true)
    {
@@ -420,7 +421,7 @@ void iolink_handler (iolink_m_cfg_t m_cfg)
       {
          os_event_clr (iolink_app_master.app_event, event_value);
 
-         for (i = 0; i < m_cfg.port_cnt; i++)
+         for (int i = 0; i < m_cfg.port_cnt; i++)
          {
             iolink_app_port_ctx_t * app_port = &iolink_app_master.app_port[i];
 
@@ -437,14 +438,16 @@ void iolink_handler (iolink_m_cfg_t m_cfg)
 
             if (((EVENT_PORTE_0 << i) & event_value) != 0)
             {
-							 //printf("EVENT_PORTE_0\n");
+               LOG_DEBUG(LOG_STATE_ON, "Port %d: EVENT_PORTE_0, state=%d\n",
+                        app_port->portnumber, app_port->app_port_state);
+               
                if (app_port->app_port_state == IOL_STATE_STARTING)
                {
                   if (iolink_start_port (app_port) != 0)
                   {
                      LOG_WARNING (
                         LOG_STATE_ON,
-                        "%s: Failed to start port %lu\n",
+                        "%s: Failed to start port %d\n",
                         __func__,
                         i + 1);
                   }
@@ -453,7 +456,7 @@ void iolink_handler (iolink_m_cfg_t m_cfg)
                {
                   LOG_WARNING (
                      LOG_STATE_ON,
-                     "%s: EVENT_PORT for port %lu, when in port_state %u\n",
+                     "%s: EVENT_PORT for port %d, when in port_state %u\n",
                      __func__,
                      i + 1,
                      app_port->app_port_state);
@@ -462,26 +465,47 @@ void iolink_handler (iolink_m_cfg_t m_cfg)
 
             if (((EVENT_RETRY_ESTCOM_0 << i) & event_value) != 0)
             {
-							LOG_INFO(LOG_STATE_ON, "Port %d: EVENT_RETRY_ESTCOM_0\n", app_port->portnumber);
+               event_count[i]++;
+               LOG_INFO(LOG_STATE_ON, 
+                       "Port %d: EVENT_RETRY_ESTCOM_0 #%u, state=%d\n",
+                       app_port->portnumber, event_count[i], app_port->app_port_state);
+               
                if (app_port->app_port_state == IOL_STATE_WU_RETRY_WAIT_TSD)
                {
+                  LOG_DEBUG(LOG_STATE_ON, "Port %d: Resetting DL and reconfiguring\n", i);
+                  
                   iolink_dl_reset (iolink_get_port (
                      iolink_app_master.master,
                      app_port->portnumber));
-                  if (iolink_config_port (app_port, port_mode[i]) != 0)
+																	
+									int result = iolink_config_port (app_port, port_mode[i]);
+									
+									LOG_DEBUG(LOG_STATE_ON, "Port %d: After config_port, result=%d, state=%d\n", 
+													 i, result, app_port->app_port_state);
+									
+									if (result != 0)
                   {
                      LOG_WARNING (
                         LOG_STATE_ON,
-                        "%s: Failed to config port %lu\n",
+												"%s: Failed to config port %dn",
                         __func__,
                         i + 1);
                   }
+               }
+               else
+               {
+                  LOG_WARNING(LOG_STATE_ON, 
+                             "Port %d: Unexpected state for RETRY_ESTCOM: %d\n",
+                             i, app_port->app_port_state);
                }
             }
 
             if (((EVENT_COMLOST_0 << i) & event_value) != 0)
             {
-							LOG_INFO(LOG_STATE_ON, "Port %d: EVENT_COMLOST_0\n", app_port->portnumber);
+               event_count[i]++;
+               LOG_INFO(LOG_STATE_ON, 
+                       "Port %d: EVENT_COMLOST_0 #%u, state=%d\n",
+                       app_port->portnumber, event_count[i], app_port->app_port_state);
 
                os_timer_stop (iolink_tsd_tmr[i]);
                if (app_port->app_port_state == IOL_STATE_STARTING)
@@ -492,11 +516,13 @@ void iolink_handler (iolink_m_cfg_t m_cfg)
                }
                else if (app_port->app_port_state != IOL_STATE_STOPPING)
                {
+                  LOG_INFO(LOG_STATE_ON, "Port %d: Retry WURQ immediately\n", i);
                   /* Send WURQ immediately */
                   iolink_retry_estcom (NULL, (void *)i);
                }
                else // (app_port->app_port_state == IOL_STATE_STOPPING)
                {
+                  LOG_INFO(LOG_STATE_ON, "Port %d: In STOPPING state, setting INACTIVE\n", i);
                   app_port->app_port_state = IOL_STATE_INACTIVE;
                }
             }
@@ -511,7 +537,6 @@ static void handle_smi_deviceevent (
 {
 	LOG_DEBUG (LOG_STATE_ON, "%s\n", __func__);
 	
-	printf ("*************\n");
 	/*
    if (app_port->type == GOLDEN)
    {
