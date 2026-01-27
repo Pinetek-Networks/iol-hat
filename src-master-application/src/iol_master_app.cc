@@ -62,7 +62,7 @@
 #include "argparse.h"
 
 // Defaults
-#define VERSION "1.5"
+#define VERSION "1.5a"
 
 
 #define DEFAULT_TCP_12	12010

@@ -328,7 +328,7 @@ static void iolink_14819_set_SDCI (
    iolink_14819_write_register (iolink, REG_CyclTmrA + ch, cfg->SDCI.cycl_tmr_val);
    iolink_14819_write_register (iolink, REG_DeviceDlyA + ch, cfg->SDCI.dev_del_val);
    iolink_14819_write_register (iolink, REG_TrigAssgnA + ch,  cfg->SDCI.trig_assg_val);
-   iolink_14819_write_register (iolink, REG_CQCfgA + ch, 0x15);
+   iolink_14819_write_register (iolink, REG_CQCfgA + ch, 0x34);
    // Enable interrupts
    regval = iolink_14819_read_register (iolink, REG_InterruptEn);
    iolink_14819_write_register (
