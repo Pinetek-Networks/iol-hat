@@ -140,7 +140,12 @@ iolink_smi_errortypes_t do_smi_device_read (
 				LOG_DEBUG (LOG_STATE_ON, "event value=%d", event_value);
          os_event_clr (app_port->event, event_value);
 
-         if (data != NULL)
+         errortype = app_port->errortype;
+         if (errortype != IOLINK_SMI_ERRORTYPE_NONE)
+         {
+            app_port->errortype = IOLINK_SMI_ERRORTYPE_NONE;
+         }
+         else if (data != NULL)
          {
             if (app_port->param_read.data_len > 0)
             {

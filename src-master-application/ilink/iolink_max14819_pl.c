@@ -317,7 +317,7 @@ static void iolink_14819_set_SDCI (
    uint8_t regval;
 
    os_mutex_lock (iolink->exclusive);
-
+	
    // Disable interrupts
    regval = iolink_14819_read_register (iolink, REG_InterruptEn);
    iolink_14819_write_register (iolink, REG_InterruptEn, regval & ~(0x05 << ch));
@@ -328,7 +328,7 @@ static void iolink_14819_set_SDCI (
    iolink_14819_write_register (iolink, REG_CyclTmrA + ch, cfg->SDCI.cycl_tmr_val);
    iolink_14819_write_register (iolink, REG_DeviceDlyA + ch, cfg->SDCI.dev_del_val);
    iolink_14819_write_register (iolink, REG_TrigAssgnA + ch,  cfg->SDCI.trig_assg_val);
-   iolink_14819_write_register (iolink, REG_CQCfgA + ch, 0x15);
+   iolink_14819_write_register (iolink, REG_CQCfgA + ch, 0x34);
    // Enable interrupts
    regval = iolink_14819_read_register (iolink, REG_InterruptEn);
    iolink_14819_write_register (
@@ -360,8 +360,8 @@ static void iolink_14819_delete_master_message (
    uint8_t regCQCtrl, reg_val;
 
    regCQCtrl = REG_CQCtrlA + ch;
-
-   reg_val = iolink_14819_read_register (iolink, regCQCtrl);
+	 
+ reg_val = iolink_14819_read_register (iolink, regCQCtrl);
    reg_val |= MAX14819_CQCTRL_TX_FIFO_RST;
    iolink_14819_write_register (iolink, regCQCtrl, reg_val);
 }
@@ -539,7 +539,7 @@ static bool iolink_pl_max14819_set_mode (
       break;
    }
    os_mutex_unlock (iolink->exclusive);
-	 
+
    return true;
 }
 
@@ -778,7 +778,7 @@ static bool iolink_pl_max14819_init_sdci (iolink_hw_drv_t * iolink_hw, void * ar
 
    iolink->wurq_request[ch] = true;
    os_mutex_unlock (iolink->exclusive);
-	 
+
 
    return true;
 }
@@ -811,6 +811,7 @@ static void iolink_pl_max14819_sio_set_do (iolink_hw_drv_t * iolink_hw, void * a
 }
 
 
+
 static void iolink_pl_max14819_pl_handler (iolink_hw_drv_t * iolink_hw, void * arg)
 {
    iolink_14819_drv_t * iolink    = (iolink_14819_drv_t *)iolink_hw;
@@ -830,90 +831,90 @@ static void iolink_pl_max14819_pl_handler (iolink_hw_drv_t * iolink_hw, void * a
    os_mutex_lock (iolink->exclusive);
    
 	 // If interrupts occur during the processing, catch them as well
-   reg = iolink_14819_read_register (iolink, REG_Interrupt);
+		 reg = iolink_14819_read_register (iolink, REG_Interrupt);
 		 
 		 LOG_DEBUG(IOLINK_PL_LOG, "Interrupt; REG = %d\n", reg);
 
-   // Check for status error
-   if (reg & MAX14819_INTERRUPT_STATUS)
-   {
-      // TODO: Status error. Get error(s)
-      LOG_ERROR (IOLINK_PL_LOG, "PL: Got status error\n");
-   }
+		 // Check for status error
+		 if (reg & MAX14819_INTERRUPT_STATUS)
+		 {
+				uint8_t reg_status = iolink_14819_read_register (iolink, REG_Status);
+				iolink->latched_reg_status |= reg_status & 0xF0;
+				LOG_ERROR (IOLINK_PL_LOG, "PL: Got status error, REG_Status=0x%02X\n", reg_status);
+		 }
 
-   // Check channel specific flags
-   for (ch = 0; ch < MAX14819_NUM_CHANNELS; ch++)
-   {
-      if (reg & (MAX14819_INTERRUPT_TX_ERR_A << ch))
-      {
-         if (iolink->wurq_request[ch])
-         {
-            /* Silence possibly erroneous error
-             *
-             * The TransmErr bit is set while attempting to establish
-             * communication, causing a TxError interrupt. This would indicate
-             * that bits written to CQ line get corrupted. (See data sheet
-             * section "Transmit Loopback Check"). Looking at the CQ line
-             * using a logic analyser does not indicate that any corruption is
-             * going on however. The root cause of the issue is unknown.
-             * Given that the error seems erroneous, logging an error or warning
-             * message does not seem to be warranted.
-             */
-            iolink_max14819_clear_errors (iolink, ch);
-         }
-         else
-         {
-            os_event_set (iolink->dl_event[ch], IOLINK_PL_EVENT_TXERR);
-         }
-      }
+		 // Check channel specific flags
+		 for (ch = 0; ch < MAX14819_NUM_CHANNELS; ch++)
+		 {
+				if (reg & (MAX14819_INTERRUPT_TX_ERR_A << ch))
+				{
+					 if (iolink->wurq_request[ch])
+					 {
+							/* Silence possibly erroneous error
+							 *
+							 * The TransmErr bit is set while attempting to establish
+							 * communication, causing a TxError interrupt. This would indicate
+							 * that bits written to CQ line get corrupted. (See data sheet
+							 * section "Transmit Loopback Check"). Looking at the CQ line
+							 * using a logic analyser does not indicate that any corruption is
+							 * going on however. The root cause of the issue is unknown.
+							 * Given that the error seems erroneous, logging an error or warning
+							 * message does not seem to be warranted.
+							 */
+							iolink_max14819_clear_errors (iolink, ch);
+					 }
+					 else
+					 {
+							os_event_set (iolink->dl_event[ch], IOLINK_PL_EVENT_TXERR);
+					 }
+				}
 
-      if (reg & (MAX14819_INTERRUPT_RX_ERR_A << ch))
-      {
-         os_event_set (iolink->dl_event[ch], IOLINK_PL_EVENT_RXERR);
-      }
-      
-      if (reg & (MAX14819_INTERRUPT_RX_DATA_RDY_A << ch))
-      {
-         if (!iolink->data_ready[ch])
-         {
-            iolink->data_ready[ch] = true;
-         os_event_set (iolink->dl_event[ch], IOLINK_PL_EVENT_RXRDY);
-      }
-   }
-   }
+				if (reg & (MAX14819_INTERRUPT_RX_ERR_A << ch))
+				{
+					 os_event_set (iolink->dl_event[ch], IOLINK_PL_EVENT_RXERR);
+				}
+				
+				if (reg & (MAX14819_INTERRUPT_RX_DATA_RDY_A << ch))
+				{
+					 if (!iolink->data_ready[ch])
+					 {
+							iolink->data_ready[ch] = true;
+							os_event_set (iolink->dl_event[ch], IOLINK_PL_EVENT_RXRDY);
+					 }
+				}
+		 }
 
-   // Process WURQ
-   if (reg & MAX14819_INTERRUPT_WURQ)
-   {
-      bool completed_wurq = false;
+		 // Process WURQ
+		 if (reg & MAX14819_INTERRUPT_WURQ)
+		 {
+				bool completed_wurq = false;
 
-      for (ch = 0; ch < MAX14819_NUM_CHANNELS; ch++)
-      {
-         if (iolink->wurq_request[ch])
-         {
-            uint8_t reg_val;
-            uint8_t reg_cqctrl = REG_CQCtrlA + ch;
+				for (ch = 0; ch < MAX14819_NUM_CHANNELS; ch++)
+				{
+					 if (iolink->wurq_request[ch])
+					 {
+							uint8_t reg_val;
+							uint8_t reg_cqctrl = REG_CQCtrlA + ch;
 
-            reg_val = iolink_14819_read_register (iolink, reg_cqctrl);
+							reg_val = iolink_14819_read_register (iolink, reg_cqctrl);
 
-            if (!(reg_val & MAX14819_CQCTRL_EST_COM))
-            {
-               iolink->wurq_request[ch] = false;
-               os_event_set (iolink->dl_event[ch], IOLINK_PL_EVENT_WURQ);
-               completed_wurq = true;
-            }
-         }
-      }
+							if (!(reg_val & MAX14819_CQCTRL_EST_COM))
+							{
+								 iolink->wurq_request[ch] = false;
+								 os_event_set (iolink->dl_event[ch], IOLINK_PL_EVENT_WURQ);
+								 completed_wurq = true;
+							}
+					 }
+				}
 
-      if (!completed_wurq)
-      {
-         LOG_ERROR (IOLINK_PL_LOG, "PL: Got WURQ, but no channel was handled\n");
-      }
-   }
-
+				if (!completed_wurq)
+				{
+					 LOG_ERROR (IOLINK_PL_LOG, "PL: Got WURQ, but no channel was handled\n");
+				}
+		 }
+		 
    os_mutex_unlock (iolink->exclusive);
 }
-
 
    static const iolink_hw_ops_t iolink_hw_ops = {
       .get_baudrate        = iolink_pl_max14819_get_baudrate,
@@ -935,6 +936,7 @@ static void iolink_pl_max14819_pl_handler (iolink_hw_drv_t * iolink_hw, void * a
 			.set_power           = iolink_pl_max14819_set_power,
 			.set_led             = iolink_pl_max14819_set_led,
 			.get_status          = iolink_pl_max14819_get_status,
+			.get_reg_status      = iolink_pl_max14819_get_reg_status,
    };
 	 
 	 
@@ -971,8 +973,8 @@ iolink_hw_drv_t * iolink_14819_init (const iolink_14819_cfg_t * cfg)
       return NULL;
    }
 	 
+   iolink->drv.mtx = os_mutex_create();
    iolink->exclusive = os_mutex_create();
-   iolink->drv.mtx = iolink->exclusive;
 	 
    /* Verify chip is supported */
    rev = iolink_14819_read_register (iolink, REG_RevID);
@@ -981,6 +983,7 @@ iolink_hw_drv_t * iolink_14819_init (const iolink_14819_cfg_t * cfg)
    {
       LOG_ERROR (IOLINK_PL_LOG, "PL: Unsupported chip revision : 0x%02x or cannot read chip revision (is the MAX14819 connected?)\n", rev);
       os_mutex_destroy(iolink->exclusive);
+      os_mutex_destroy(iolink->drv.mtx);
       _iolink_pl_hw_spi_close(iolink->fd_spi);
       free (iolink);
       return NULL;
@@ -988,8 +991,6 @@ iolink_hw_drv_t * iolink_14819_init (const iolink_14819_cfg_t * cfg)
 
 		
 		LOG_DEBUG (IOLINK_PL_LOG, "SPI mode set\n");
-
-   iolink->exclusive = os_mutex_create();
 
 		//LOG_DEBUG(IOLINK_PL_LOG, "Init MAX registers\n");
    // Reset all registers
@@ -1057,47 +1058,27 @@ iolink_hw_drv_t * iolink_14819_init (const iolink_14819_cfg_t * cfg)
 
 void iolink_14819_isr (void * arg)
 {
-   iolink_14819_drv_t * iolink;
-   iolink = (iolink_14819_drv_t *)arg;
-		 
-   // Wake the handler for an ACTIVE channel (one with is_iolink set)
-   // Priority: Active channels first, then fallback to any initialized channel
-   // This ensures the correct handler processes all interrupts
+   iolink_14819_drv_t * iolink = (iolink_14819_drv_t *)arg;
+   uint8_t ch;
+   bool any_woken = false;
+   
+   /* Wake every configured channel's DL thread. Each pl_handler call checks
+    * is_iolink[channel] at entry and returns immediately if the channel is not
+    * in SDCI mode, so waking an inactive channel is safe and avoids the
+    * second-class-citizen problem where ch B interrupts went unserviced
+    * whenever ch A was also active. */
+   for (ch = 0; ch < MAX14819_NUM_CHANNELS; ch++)
+   {
+     if (iolink->dl_event[ch] != NULL)
+     {
+       os_event_set (iolink->dl_event[ch], iolink->pl_flag);
+       any_woken = true;
+     }
+   }
 
-   if (iolink->is_iolink[0] && iolink->dl_event[0] != NULL)
-      {
-      // Channel 0 is active - wake its handler
-      LOG_DEBUG (IOLINK_PL_LOG, "iolink_14819_isr:>>5a-0\n");
-      os_event_set (iolink->dl_event[0], iolink->pl_flag);
-      LOG_DEBUG (IOLINK_PL_LOG, "iolink_14819_isr:>>5b-0\n");
-      }
-   else if (iolink->is_iolink[1] && iolink->dl_event[1] != NULL)
+   if (!any_woken)
    {
-      // Channel 1 is active - wake its handler
-      LOG_DEBUG (IOLINK_PL_LOG, "iolink_14819_isr:>>5a-1\n");
-      os_event_set (iolink->dl_event[1], iolink->pl_flag);
-      LOG_DEBUG (IOLINK_PL_LOG, "iolink_14819_isr:>>5b-1\n");
-   }
-   else if (iolink->dl_event[0] != NULL)
-   {
-      // Fallback: No active channel yet, but ch 0 handler exists
-      // (happens during initialization or when both channels inactive)
-      LOG_DEBUG (IOLINK_PL_LOG, "iolink_14819_isr:>>5a-0 (fallback)\n");
-      os_event_set (iolink->dl_event[0], iolink->pl_flag);
-      LOG_DEBUG (IOLINK_PL_LOG, "iolink_14819_isr:>>5b-0 (fallback)\n");
-   }
-   else if (iolink->dl_event[1] != NULL)
-   {
-      // Fallback: ch 1 handler exists
-      LOG_DEBUG (IOLINK_PL_LOG, "iolink_14819_isr:>>5a-1 (fallback)\n");
-      os_event_set (iolink->dl_event[1], iolink->pl_flag);
-      LOG_DEBUG (IOLINK_PL_LOG, "iolink_14819_isr:>>5b-1 (fallback)\n");
-   }
-   else
-   {
-      // No handlers available at all
       LOG_ERROR (IOLINK_PL_LOG, "iolink_14819_isr: No event handlers available\n");
-      iolink->pl_flag = 0xBADBAD;
    }
 }
 
@@ -1239,4 +1220,13 @@ void iolink_pl_max14819_get_status(iolink_hw_drv_t * iolink_hw, uint8_t _port, b
 	os_mutex_unlock (iolink->exclusive);
 }
 
-
+uint8_t iolink_pl_max14819_get_reg_status(iolink_hw_drv_t * iolink_hw)
+{
+	iolink_14819_drv_t * iolink = (iolink_14819_drv_t *)iolink_hw;
+	os_mutex_lock (iolink->exclusive);
+	uint8_t live = iolink_14819_read_register (iolink, REG_Status);
+	uint8_t result = live | iolink->latched_reg_status;
+	iolink->latched_reg_status = 0;
+	os_mutex_unlock (iolink->exclusive);
+	return result;
+}

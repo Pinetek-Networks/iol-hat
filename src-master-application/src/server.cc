@@ -120,15 +120,23 @@ void *runServer (void *_arg)
 		LOG_DEBUG (IOLINK_PL_LOG, "READ %d bytes:%s\n", valread, rxBuf);
 		
 		// Structure is CMD | PORT | ...
-		
+
+		// CMD_STATUS3 is chip-level: only 1 byte (no port byte)
+		if (valread == 1 && buffer[0] == CMD_STATUS3)
+		{
+			buffer[1] = socketArgs->iolink_hw->ops->get_reg_status(socketArgs->iolink_hw);
+			LOG_DEBUG(IOLINK_PL_LOG, "CMD_STATUS3 reg_status=0x%02X\n", buffer[1]);
+			send(newSocket, buffer, 2, 0);
+		}
+
 		// Too less bytes
-		if (valread < 2)
+		else if (valread < 2)
 		{
 			LOG_ERROR(IOLINK_PL_LOG, "ERROR: Command len\n");
 			uint8_t myErrorMessage[] = {RET_ERROR, RET_ERROR_LEN};
 			send(newSocket, myErrorMessage, 2, 0);
 		}
-		
+
 		// Port not in range 0..1
 		else if (buffer[1] > 1)
 		{
@@ -147,6 +155,13 @@ void *runServer (void *_arg)
 			// Switch CMD
 			switch (buffer[0])
 			{
+				case CMD_EMPTY:
+				{
+					uint8_t myErrorMessage[] = {RET_ERROR, RET_ERROR_FUNC};
+					send(newSocket, myErrorMessage, 2, 0);
+					break;
+				}
+
 				// Power
 				case CMD_PWR:
 				// [CMD] [port] [status]
@@ -546,20 +561,16 @@ void *runServer (void *_arg)
 				case CMD_STATUS:
 				case CMD_STATUS2:
 				{
-					
+					// [CMD] [port]
 					if (buffer[0] == CMD_STATUS)
 					{
-						// [CMD] [port]					
 						LOG_DEBUG(IOLINK_PL_LOG, "CMD_STATUS\n");
 					}
-					
 					else
 					{
-						// [CMD] [port]					
 						LOG_DEBUG(IOLINK_PL_LOG, "CMD_STATUS2\n");
 					}
 
-					
 					if (valread != 2)
 					{
 						LOG_ERROR(IOLINK_PL_LOG, "ERROR: CMD_STATUS len\n");
@@ -567,7 +578,7 @@ void *runServer (void *_arg)
 						send(newSocket, myErrorMessage, 2, 0);
 						break;
 					}
-					
+
 					if (buffer[1] > PORT_NUMBER)
 					{
 						LOG_ERROR(IOLINK_PL_LOG, "ERROR: CMD_STATUS port id out of range\n");
@@ -575,76 +586,73 @@ void *runServer (void *_arg)
 						send(newSocket, myErrorMessage, 2, 0);
 						break;
 					}
-					
-					bool myPower; 
+
+					bool myPower;
 					uint8_t myBaudrate;
 					uint8_t myPort = buffer[1];
 					uint8_t myError;
-					
+
 					socketArgs->iolink_hw->ops->get_status(socketArgs->iolink_hw, myPort, &myPower, &myBaudrate, &myError);
 					iolink_port_t *myPort_t  = iolink_get_port (iolink_app_master.master, app_port->portnumber);
-					
-					uint8_t myPortStatus =  app_port->app_port_state;
-					
+
+					uint8_t myPortStatus = app_port->app_port_state;
+
 					// Port not active => Set transmission rate 0 (invalid)
 					if (myPortStatus != IOL_STATE_RUNNING)
 					{
-						status[myPort].transmissionRate = 0;					
+						status[myPort].transmissionRate = 0;
 					}
-					
-					else 
+					else
 					{
 						status[myPort].transmissionRate = (uint8_t) myBaudrate;
-					}										
-					
+					}
+
 					status[myPort].power = myPower;
-					
+
 					uint8_t myCycletime = 0;
 
 					// Check if cycle time can be determined
 					if ((myPort == 0) && (mode_ch[0] == iolink_mode_SDCI))
-								myCycletime = iolink_pl_get_cycletime(myPort_t);
-								
+						myCycletime = iolink_pl_get_cycletime(myPort_t);
+
 					if ((myPort == 1) && (mode_ch[1] == iolink_mode_SDCI))
-								myCycletime = iolink_pl_get_cycletime(myPort_t);
+						myCycletime = iolink_pl_get_cycletime(myPort_t);
 
 					status[myPort].masterCycleTime = myCycletime;
-					
+
 					iolink_app_port_status_t * port_status = &app_port->status;
 
 					status[myPort].vendorId = port_status->vendorid;
 					status[myPort].deviceId = port_status->deviceid;
 					status[myPort].error = myError;
-					
+
 					LOG_DEBUG(LOG_STATE_ON, "port=%d\n", myPort);
 					LOG_DEBUG(LOG_STATE_ON, "pdInValid=%d\n", status[myPort].pdInValid);
 					LOG_DEBUG(LOG_STATE_ON, "pdOutValid=%d\n", status[myPort].pdOutValid);
-					LOG_DEBUG(LOG_STATE_ON, "transmissionRate=0x%X\n", status[myPort].transmissionRate);					
+					LOG_DEBUG(LOG_STATE_ON, "transmissionRate=0x%X\n", status[myPort].transmissionRate);
 					LOG_DEBUG(LOG_STATE_ON, "cycleTime=0x%X\n", status[myPort].masterCycleTime);
 					LOG_DEBUG(LOG_STATE_ON, "pdInLength=%d\n", status[myPort].pdInLength);
 					LOG_DEBUG(LOG_STATE_ON, "pdOutLength=%d\n", status[myPort].pdOutLength);
 					LOG_DEBUG(LOG_STATE_ON, "vendorId=0x%X\n", status[myPort].vendorId);
 					LOG_DEBUG(LOG_STATE_ON, "deviceId=0x%X\n", status[myPort].deviceId);
 					LOG_DEBUG(LOG_STATE_ON, "power=%d\n", status[myPort].power);
-					
+
 					int mySize = sizeof(iolStatus);
-								
+
 					if (buffer[0] == CMD_STATUS)
 					{
-						mySize = sizeof(iolStatus)-1;  // -1 due to missing error byte
+						mySize = sizeof(iolStatus) - 1;  // -1 due to missing error byte
 					}
-					
-					else // CMD_STATUS2
+					else
 					{
 						LOG_DEBUG(LOG_STATE_ON, "error=%d\n", status[myPort].error);
-					}					
+					}
 
-					memcpy(&buffer[2], &status[myPort], mySize);	
-					send(newSocket, buffer, 2+mySize,0); 
-
+					memcpy(&buffer[2], &status[myPort], mySize);
+					send(newSocket, buffer, 2+mySize, 0);
 				}
 				break;
-				
+
 				default:
 				{
 					LOG_ERROR(IOLINK_PL_LOG, "ERROR: function %d not supported\n", buffer[0]);

@@ -68,10 +68,20 @@ typedef struct {
   uint16_t vendorId;
   uint32_t deviceId;
   uint8_t power;
+  uint8_t error; // REG_ChanStatA/B bits 0-2; populated by readStatus2(), set to 0 by readStatus()
 }
 __attribute__((__packed__)) iol_status;
 
+// CMD_STATUS (6): 13-byte payload, error field set to 0
 int readStatus(uint8_t _port, iol_status * _status);
+
+// CMD_STATUS2 (8): 14-byte payload, error field populated from REG_ChanStatA/B
+int readStatus2(uint8_t _port, iol_status * _status);
+
+// CMD_STATUS3 (9): chip-level REG_Status read (not per-port)
+// chip: 0 = TCP_PORT1 (ports 0-1), 1 = TCP_PORT2 (ports 2-3)
+// Returns reg_status byte on success, CMD_FAIL on error
+int readStatus3(uint8_t chip);
 
 // Function to set LED status for a specific port
 // Parameters:

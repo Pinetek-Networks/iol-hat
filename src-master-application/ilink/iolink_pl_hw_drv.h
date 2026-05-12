@@ -77,6 +77,7 @@ typedef struct iolink_hw_ops
 	 void (*set_power) (struct iolink_hw_drv * iolink_hw, uint8_t _port, bool _power, uint16_t _delay_current_limit);
 	 void (*set_led) (struct iolink_hw_drv * iolink_hw, uint8_t _port, bool _ledR, bool _ledG);
 	 void (*get_status) (struct iolink_hw_drv * iolink_hw, uint8_t _port, bool *_power, uint8_t *_baudrate, uint8_t *_error);
+	 uint8_t (*get_reg_status) (struct iolink_hw_drv * iolink_hw);
 } iolink_hw_ops_t;
 
 typedef struct iolink_hw_drv

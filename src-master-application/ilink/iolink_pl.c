@@ -26,6 +26,7 @@
 
 #include <fcntl.h>  /* O_RDWR */
 #include <unistd.h> /* close */
+#include <sched.h>  /* sched_yield */
 
 #include "iolink_main.h" /* iolink_port_t */
 
@@ -74,6 +75,7 @@ void iolink_pl_handler (iolink_port_t * port)
       os_mutex_lock (drv->mtx);
       drv->ops->pl_handler (pl->drv, pl->arg);
       os_mutex_unlock (drv->mtx);
+      sched_yield();
    }
 }
 
@@ -141,6 +143,7 @@ bool iolink_pl_get_data (iolink_port_t * port, uint8_t * rxdata, uint8_t len)
       os_mutex_lock (drv->mtx);
       res = drv->ops->get_data (pl->drv, pl->arg, rxdata, len);
       os_mutex_unlock (drv->mtx);
+      sched_yield();
    }
    else
    {
@@ -230,6 +233,7 @@ void PL_Transfer_req (
       os_mutex_lock (drv->mtx);
       drv->ops->transfer_req (pl->drv, pl->arg, rxbytes, txbytes, data);
       os_mutex_unlock (drv->mtx);
+      sched_yield();
    }
 }
 
@@ -247,6 +251,7 @@ void PL_MessageDownload_req (
       os_mutex_lock (drv->mtx);
       drv->ops->dl_msg (pl->drv, pl->arg, rxbytes, txbytes, data);
       os_mutex_unlock (drv->mtx);
+      sched_yield();
    }
 }
 

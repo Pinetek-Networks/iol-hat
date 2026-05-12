@@ -79,8 +79,44 @@ def main():
 	except:
 		iolhat.led(1,iolhat.LED_RED)
 
+	# CMD_STATUS: port-level status without error field
+	print("\n--- CMD_STATUS (port 0) ---")
 	iol_status = iolhat.readStatus(0)
+	iol_status.print_status()
+
+	print("\n--- CMD_STATUS (port 1) ---")
 	iol_status = iolhat.readStatus(1)
+	iol_status.print_status()
+
+	# CMD_STATUS2: port-level status including REG_ChanStatA/B error field
+	print("\n--- CMD_STATUS2 (port 0) ---")
+	iol_status2 = iolhat.readStatus2(0)
+	iol_status2.print_status()
+
+	print("\n--- CMD_STATUS2 (port 1) ---")
+	iol_status2 = iolhat.readStatus2(1)
+	iol_status2.print_status()
+
+	# CMD_STATUS3: chip-level REG_Status (VCC and thermal faults)
+	# chip=0 covers ports 0+1, chip=1 covers ports 2+3
+	print("\n--- CMD_STATUS3 (chip 0, ports 0+1) ---")
+	reg_status = iolhat.readStatus3(0)
+	print(f"reg_status = 0x{reg_status:02X}")
+	if reg_status & 0x11:
+		print("  WARNING: VCCWarn — VCC supply voltage <18V (live={}, latched={})".format(
+			bool(reg_status & 0x01), bool(reg_status & 0x10)))
+	if reg_status & 0x22:
+		print("  WARNING: VCCUV — VCC undervoltage <9V (live={}, latched={})".format(
+			bool(reg_status & 0x02), bool(reg_status & 0x20)))
+	if reg_status & 0x44:
+		print("  WARNING: ThWarn — die temperature >135°C (live={}, latched={})".format(
+			bool(reg_status & 0x04), bool(reg_status & 0x40)))
+	if reg_status & 0x88:
+		print("  CRITICAL: ThShdn — thermal shutdown >150°C (live={}, latched={})".format(
+			bool(reg_status & 0x08), bool(reg_status & 0x80)))
+	if reg_status == 0:
+		print("  OK: no faults")
+
 	# Wait for Power
 	time.sleep(1)
 

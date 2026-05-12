@@ -334,20 +334,22 @@ def write (port, index, subindex, length, writeData):
 # Class for the IOL status
 
 class IolStatus:
-	def __init__(self, pd_in_valid=0, pd_out_valid=0, transmission_rate=0, master_cycle_time=0, pd_in_length=0, pd_out_length=0, vendor_id=0, device_id=0, power=0):
+	def __init__(self, pd_in_valid=0, pd_out_valid=0, transmission_rate=0, master_cycle_time=0,
+				 pd_in_length=0, pd_out_length=0, vendor_id=0, device_id=0, power=0, error=None):
 		"""
 		Initializes the IolStatus object with default values.
 
 		Parameters:
-		pd_in_valid (int): Indicates if the process data input is valid (0 or 1)
-		pd_out_valid (int): Indicates if the process data output is valid (0 or 1)
-		transmission_rate (int): The rate at which data is transmitted
-		master_cycle_time (int): Master cycle time for communication
-		pd_in_length (int): Length of process data input
-		pd_out_length (int): Length of process data output
-		vendor_id (int): Vendor ID for identification
-		device_id (int): Device ID for identification
-		power (int): Indicates the power status (0 or 1)
+		pd_in_valid (int):        Indicates if the process data input is valid (0 or 1)
+		pd_out_valid (int):       Indicates if the process data output is valid (0 or 1)
+		transmission_rate (int):  COM speed (0=invalid, 1=COM1, 2=COM2, 3=COM3)
+		master_cycle_time (int):  Master cycle time in ms
+		pd_in_length (int):       Length of process data input in bytes
+		pd_out_length (int):      Length of process data output in bytes
+		vendor_id (int):          Vendor ID
+		device_id (int):          Device ID
+		power (int):              L+ enabled (0 or 1)
+		error (int|None):         REG_ChanStatA/B bits 0-2 (CMD_STATUS2 only, None for CMD_STATUS)
 		"""
 		self.pd_in_valid = pd_in_valid
 		self.pd_out_valid = pd_out_valid
@@ -358,60 +360,65 @@ class IolStatus:
 		self.vendor_id = vendor_id
 		self.device_id = device_id
 		self.power = power
+		self.error = error  # None if parsed from CMD_STATUS (13 bytes), int if from CMD_STATUS2 (14 bytes)
 
 	@classmethod
 	def from_buffer(cls, buffer):
 		"""
-		Parses a given buffer into an IolStatus object.
+		Parses a buffer into an IolStatus object.
+		Accepts both CMD_STATUS payloads (13 bytes, no error field)
+		and CMD_STATUS2 payloads (14 bytes, with error field).
 
 		Parameters:
-		buffer (bytes): The buffer containing the data to be parsed.
+		buffer (bytes): Payload bytes after stripping the 2-byte [CMD][port] header.
 
 		Returns:
 		IolStatus: An instance of IolStatus populated with the parsed data.
 		"""
 		if len(buffer) < 13:
-			raise ValueError("Buffer too short to parse IolStatus")
+			raise ValueError(f"Buffer too short to parse IolStatus (got {len(buffer)}, need at least 13)")
 
-		pd_in_valid = buffer[0]
-		pd_out_valid = buffer[1]
+		pd_in_valid      = buffer[0]
+		pd_out_valid     = buffer[1]
 		transmission_rate = buffer[2]
 		master_cycle_time = buffer[3]
-		pd_in_length = buffer[4]
-		pd_out_length = buffer[5]
-		vendor_id = int.from_bytes(buffer[6:8], byteorder='little')
-		device_id = int.from_bytes(buffer[8:12], byteorder='little')
-		power = buffer[12]
+		pd_in_length     = buffer[4]
+		pd_out_length    = buffer[5]
+		vendor_id        = int.from_bytes(buffer[6:8],  byteorder='little')
+		device_id        = int.from_bytes(buffer[8:12], byteorder='little')
+		power            = buffer[12]
+		error            = buffer[13] if len(buffer) >= 14 else None
 
-		return cls(pd_in_valid, pd_out_valid, transmission_rate, master_cycle_time, pd_in_length, pd_out_length, vendor_id, device_id, power)
+		return cls(pd_in_valid, pd_out_valid, transmission_rate, master_cycle_time,
+				   pd_in_length, pd_out_length, vendor_id, device_id, power, error)
 
 	def print_status(self):
 		"""
 		Prints the current status of the IolStatus object.
 		"""
-		print(f"pd_in_valid: {self.pd_in_valid}")
-		print(f"pd_out_valid: {self.pd_out_valid}")
+		print(f"pd_in_valid:       {self.pd_in_valid}")
+		print(f"pd_out_valid:      {self.pd_out_valid}")
 		print(f"transmission_rate: {self.transmission_rate}")
 		print(f"master_cycle_time: {self.master_cycle_time}")
-		print(f"pd_in_length: {self.pd_in_length}")
-		print(f"pd_out_length: {self.pd_out_length}")
-		print(f"vendor_id: {self.vendor_id}")
-		print(f"device_id: {self.device_id}")
-		print(f"power: {self.power}")
+		print(f"pd_in_length:      {self.pd_in_length}")
+		print(f"pd_out_length:     {self.pd_out_length}")
+		print(f"vendor_id:         0x{self.vendor_id:04X}")
+		print(f"device_id:         0x{self.device_id:08X}")
+		print(f"power:             {self.power}")
+		if self.error is not None:
+			print(f"error:             0x{self.error:02X}")
 
 	def __repr__(self):
-		"""
-		Returns a string representation of the IolStatus object for debugging purposes.
-		"""
+		error_str = f", error=0x{self.error:02X}" if self.error is not None else ""
 		return (f"IolStatus(pd_in_valid={self.pd_in_valid}, pd_out_valid={self.pd_out_valid}, "
 				f"transmission_rate={self.transmission_rate}, master_cycle_time={self.master_cycle_time}, "
 				f"pd_in_length={self.pd_in_length}, pd_out_length={self.pd_out_length}, "
-				f"vendor_id={self.vendor_id}, device_id={self.device_id}, power={self.power})")
+				f"vendor_id=0x{self.vendor_id:04X}, device_id=0x{self.device_id:08X}, "
+				f"power={self.power}{error_str})")
 
 
 def readStatus(port):
 	print ("*** CMD STATUS, port=",port)
-	return_data = ""
 
 	if (port not in [0,1,2,3]):
 		raise ValueError("STATUS: Port out of range")
@@ -422,49 +429,157 @@ def readStatus(port):
 		tcp_port = TCP_PORT2
 		port=port-2
 
-	#CMD STATUS = 6
-	message = struct.pack("!BB",6, port);
+	# CMD_STATUS = 6, response: [CMD][port] + 13 bytes payload = 15 bytes total
+	message = struct.pack("!BB", 6, port)
 	s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
 	try:
 		s.connect((TCP_IP, tcp_port))
-
 		s.send(message)
 		data = s.recv(BUFFER_SIZE)
+		data_len = len(data)
 
-		data_len=len(data)
-		if (verbose):
-			print ("received data:", data, ", len=", data_len)
+		if verbose:
+			print("received data:", data, ", len=", data_len)
 
-		#ERROR (TCP message)
-		if (data_len == 2):
+		if data_len == 2:
 			s.close()
 			raw_data = struct.unpack("!BB", data)
-			print (f"STATUS: TCP message error ", getErrorMessage (int (raw_data[1])))
-			raise Exception("STATUS: TCP message error ", getErrorMessage (int (raw_data[1])))
+			print(f"STATUS: TCP message error ", getErrorMessage(int(raw_data[1])))
+			raise Exception("STATUS: TCP message error", getErrorMessage(int(raw_data[1])))
 
-		#ERROR (length error)
-		elif (data_len != 15):
+		elif data_len != 15:
 			s.close()
-			raw_data = struct.unpack("!BBH", data)
-			print (f"STATUS: TCP commend returned wrong length, expected 15, got ", data_len)
-			raise Exception("STATUS: TCP commend returned wrong length")
+			print(f"STATUS: unexpected response length, expected 15, got {data_len}")
+			raise Exception("STATUS: unexpected response length")
 
 		else:
-			#print (f"Read: port={port}, status={status}")
-			return_data = data[2:]
-			iol_status = IolStatus.from_buffer(return_data)
-			return iol_status
+			return IolStatus.from_buffer(data[2:])
 
 	except Exception as e:
 		s.close()
-		print (f"STATUS: exception:", e)
-		raise Exception({e})
+		print(f"STATUS: exception:", e)
+		raise
 
-	
 	s.close()
-	## Give some time to prevent overload
-	time.sleep(4/1000)
+
+
+def readStatus2(port):
+	print ("*** CMD STATUS2, port=",port)
+
+	if (port not in [0,1,2,3]):
+		raise ValueError("STATUS2: Port out of range")
+
+	if (port < 2):
+		tcp_port = TCP_PORT1
+	else:
+		tcp_port = TCP_PORT2
+		port=port-2
+
+	# CMD_STATUS2 = 8, response: [CMD][port] + 14 bytes payload = 16 bytes total
+	message = struct.pack("!BB", 8, port)
+	s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+	try:
+		s.connect((TCP_IP, tcp_port))
+		s.send(message)
+		data = s.recv(BUFFER_SIZE)
+		data_len = len(data)
+
+		if verbose:
+			print("received data:", data, ", len=", data_len)
+
+		if data_len == 2:
+			s.close()
+			raw_data = struct.unpack("!BB", data)
+			print(f"STATUS2: TCP message error ", getErrorMessage(int(raw_data[1])))
+			raise Exception("STATUS2: TCP message error", getErrorMessage(int(raw_data[1])))
+
+		elif data_len != 16:
+			s.close()
+			print(f"STATUS2: unexpected response length, expected 16, got {data_len}")
+			raise Exception("STATUS2: unexpected response length")
+
+		else:
+			return IolStatus.from_buffer(data[2:])
+
+	except Exception as e:
+		s.close()
+		print(f"STATUS2: exception:", e)
+		raise
+
+	s.close()
+
+
+def readStatus3(chip):
+	"""
+	Reads the chip-level REG_Status (0x1E) from the MAX14819.
+	This is a chip-level command (not per-port) — it returns the combined live +
+	latched fault register for the entire chip (both channels).
+
+	The lower nibble contains live bits (not cleared on read).
+	The upper nibble contains clear-on-read (COR) bits, which are set on the
+	0->1 transition of the corresponding live bit and cleared when the register
+	is read. The firmware latches the COR bits in software so they are not lost
+	between interrupt and this read.
+
+	Parameters:
+	chip (int): 0 = chip on TCP_PORT1 (ports 0-1), 1 = chip on TCP_PORT2 (ports 2-3)
+
+	Returns:
+	int: reg_status byte with the following bit mapping:
+	     Bit 0: VCCWarn    — VCC supply voltage warning (<18V), live
+	     Bit 1: VCCUV      — VCC undervoltage (<9V), live
+	     Bit 2: ThWarn     — Die temperature warning (>135°C), live
+	     Bit 3: ThShdn     — Thermal shutdown (>150°C), live
+	     Bit 4: VCCWarnCOR — VCC supply voltage warning, clear-on-read
+	     Bit 5: VCCUVCOR   — VCC undervoltage, clear-on-read
+	     Bit 6: ThWarnCOR  — Die temperature warning, clear-on-read
+	     Bit 7: ThShdnCOR  — Thermal shutdown, clear-on-read
+	"""
+	print("*** CMD STATUS3, chip=", chip)
+
+	if chip not in [0, 1]:
+		raise ValueError("STATUS3: chip must be 0 or 1")
+
+	tcp_port = TCP_PORT1 if chip == 0 else TCP_PORT2
+
+	# CMD_STATUS3 = 9, no port byte, response: [CMD][reg_status] = 2 bytes
+	message = struct.pack("!B", 9)
+	s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+	try:
+		s.connect((TCP_IP, tcp_port))
+		s.send(message)
+		data = s.recv(BUFFER_SIZE)
+		data_len = len(data)
+
+		if verbose:
+			print("received data:", data, ", len=", data_len)
+
+		if data_len != 2:
+			s.close()
+			print(f"STATUS3: unexpected response length, expected 2, got {data_len}")
+			raise Exception("STATUS3: unexpected response length")
+
+		if data[0] == 0xFF:
+			s.close()
+			raw_data = struct.unpack("!BB", data)
+			print(f"STATUS3: TCP message error ", getErrorMessage(int(raw_data[1])))
+			raise Exception("STATUS3: TCP message error", getErrorMessage(int(raw_data[1])))
+
+		reg_status = data[1]
+		if verbose:
+			print(f"reg_status=0x{reg_status:02X}")
+		return reg_status
+
+	except Exception as e:
+		s.close()
+		print(f"STATUS3: exception:", e)
+		raise
+
+	s.close()
+
 
 
 def getErrorMessage(error_code):

@@ -34,6 +34,7 @@ extern uint16_t  delay_current_limit;
 #define CMD_PD_HISTORY	7
 #endif
 #define CMD_STATUS2 		8
+#define CMD_STATUS3 		9
 
 
 typedef struct {
@@ -69,7 +70,7 @@ typedef struct {
 	uint16_t vendorId;
 	uint32_t deviceId;
 	uint8_t power;
-	
+
 	uint8_t error;
 } __attribute__((__packed__)) iolStatus;
 

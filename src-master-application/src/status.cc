@@ -26,8 +26,8 @@ void *runStatus (void *_arg)
 	{
 		
 		
-		myTime0= 1000/pdCount0;
-		myTime1= 1000/pdCount1;
+		myTime0 = (pdCount0 > 0) ? (1000 / pdCount0) : 0;
+		myTime1 = (pdCount1 > 0) ? (1000 / pdCount1) : 0;
 		
 		pdCount0 = 0;
 		pdCount1 = 0;

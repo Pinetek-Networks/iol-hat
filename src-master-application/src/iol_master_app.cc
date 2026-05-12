@@ -62,7 +62,7 @@
 #include "argparse.h"
 
 // Defaults
-#define VERSION "1.5"
+#define VERSION "1.6"
 
 
 #define DEFAULT_TCP_12	12010
@@ -219,12 +219,12 @@ int main (int argc, char ** argv)
 	int myDOMode[]= {-1,-1};
 	program.add_argument("-do0", "--do-mode0").store_into(myDOMode[0])
 	.help("DO Configuration Port 0 (X1)");
-			
+	
 	
 	program.add_argument("-do1", "--do-mode1").store_into(myDOMode[1])
 	.help("DO Configuration Port 1 (X2)");				
 	#endif
-		
+	
 	int myExtClock = -1;
 	program.add_argument("-e", "--extclock")
 	.help("Use clock for MAX14819 from ext source")
@@ -558,7 +558,7 @@ int main (int argc, char ** argv)
 	}
 
 	LOG_DEBUG (IOLINK_PL_LOG, "iol_14819_1_cfg.Clock  = %02x\n", iol_14819_0_cfg.Clock );	
-
+	 
 	if (myIolPort == 12)
 	{
 		hw = main_14819_init("/iolink0", &iol_14819_0_cfg, 24);
@@ -567,8 +567,8 @@ int main (int argc, char ** argv)
 	else
 	{
 		hw = main_14819_init("/iolink0", &iol_14819_0_cfg, 25);
-	}
-	
+	}	 
+	   
    CC_ASSERT (hw != NULL);
 
 

@@ -332,6 +332,7 @@ typedef struct iolink_dl
    bool first_read_min_cycl;
    uint8_t devdly;
    uint8_t cqerr;
+   uint32_t tcycl_err_cnt; /* counts TCyclErrA (BIT 6) occurrences — scheduling pressure indicator */
    uint8_t txbuffer[IOLINK_RXTX_BUFFER_SIZE];
    uint8_t rxbuffer[IOLINK_RXTX_BUFFER_SIZE];
    uint8_t tinitcyc;

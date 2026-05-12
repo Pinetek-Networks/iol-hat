@@ -309,6 +309,8 @@ static uint8_t iolink_start_port (iolink_app_port_ctx_t * app_port)
 		generic_setup1(app_port);
 	
 
+   app_port->errortype = IOLINK_SMI_ERRORTYPE_NONE;
+
    LOG_INFO (LOG_STATE_ON, "%s: Port %u: Start done!\n", __func__, portnumber);
    os_mutex_unlock (app_port->status_mtx);
 
@@ -354,7 +356,7 @@ void iolink_handler (iolink_m_cfg_t m_cfg)
       if (*m_cfg.port_cfgs[i].mode == iolink_mode_SDCI)
       {
          iolink_tsd_tmr[i] =
-            os_timer_create (1000 * 1000, iolink_retry_estcom, (void *)i, true);
+            os_timer_create (1000 * 1000, iolink_retry_estcom, (void *)(uintptr_t)i, true);
       }
    }
 
@@ -410,7 +412,7 @@ void iolink_handler (iolink_m_cfg_t m_cfg)
    }
 
 	 static uint32_t event_count[IOLINK_NUM_PORTS] = {0};
-			
+	 
    while (true)
    {
       uint32_t event_value;
@@ -484,13 +486,13 @@ void iolink_handler (iolink_m_cfg_t m_cfg)
 													 i, result, app_port->app_port_state);
 									
 									if (result != 0)
-                  {
-                     LOG_WARNING (
-                        LOG_STATE_ON,
+									{
+										 LOG_WARNING (
+												LOG_STATE_ON,
 												"%s: Failed to config port %dn",
-                        __func__,
-                        i + 1);
-                  }
+												__func__,
+												i + 1);
+									}
                }
                else
                {
@@ -518,7 +520,7 @@ void iolink_handler (iolink_m_cfg_t m_cfg)
                {
                   LOG_INFO(LOG_STATE_ON, "Port %d: Retry WURQ immediately\n", i);
                   /* Send WURQ immediately */
-                  iolink_retry_estcom (NULL, (void *)i);
+                  iolink_retry_estcom (NULL, (void *)(uintptr_t)i);
                }
                else // (app_port->app_port_state == IOL_STATE_STOPPING)
                {
@@ -646,20 +648,20 @@ static void handle_smi_joberror (
    arg_block_joberror_t * arg_block_err)
 {
 	LOG_DEBUG (LOG_STATE_ON, "%s %X\n", __func__, arg_block_err->error);
-   app_port->errortype = arg_block_err->error;
 
-   if (app_port->errortype == IOLINK_SMI_ERRORTYPE_ARGBLOCK_LENGTH_INVALID)
-   {
-      LOG_WARNING (
-         LOG_STATE_ON,
-         "%s: Port %u: Read failed, buffer too small.\n",
-         __func__,
-         app_port->portnumber);
-   }
+   app_port->errortype = arg_block_err->error;
 
    switch (ref_arg_block_id)
    {
    case IOLINK_ARG_BLOCK_ID_OD_RD:
+      if (app_port->errortype == IOLINK_SMI_ERRORTYPE_ARGBLOCK_LENGTH_INVALID)
+      {
+         LOG_WARNING (
+            LOG_STATE_ON,
+            "%s: Port %u: Read failed, buffer too small.\n",
+            __func__,
+            app_port->portnumber);
+      }
       os_event_set (app_port->event, SMI_READ_CNF);
       break;
    case IOLINK_ARG_BLOCK_ID_OD_WR:

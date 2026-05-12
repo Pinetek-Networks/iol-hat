@@ -764,7 +764,7 @@ static void iolink_dl_mh_handle_com_lost (iolink_port_t * port)
       __func__,
       iolink_get_portnumber (port),
       iolink_dl_mh_st_literals[dl->message_handler.state]);
-
+		
 		
 		// Reset state machine for connection retry (fix PN)
 
@@ -3438,21 +3438,30 @@ static void iolink_dl_handle_error (iolink_port_t * port)
       if (real_tx_errors != 0)  // TransmErrA/TChksmErA/TSizeErrA
       {
          dl->txerror = true;
-      LOG_WARNING (
-         IOLINK_DL_LOG,
-         "%s: Transmission error: %x\n",
-         __func__,
-         dl->cqerr);
-   }
+         LOG_WARNING (
+            IOLINK_DL_LOG,
+            "%s: Transmission error: %x\n",
+            __func__,
+            dl->cqerr);
+      }
       else if (dl->cqerr & BIT(6))  // Only TCyclErrA is set
       {
-         // Log as debug only - this is typically a spurious error
-         LOG_DEBUG (
-            IOLINK_DL_LOG,
-            "%s: Spurious TCyclErrA (0x40) detected and filtered on Port %d\n",
-            __func__,
-            iolink_get_portnumber (port));
-         // Don't set dl->txerror - treat as non-error
+         /* TCyclErrA indicates the cycle timer fired before the master message
+          * was transmitted — an early sign of scheduling pressure.  We do not
+          * set dl->txerror (which would trigger COMLOST) because the IO-Link
+          * link typically recovers on its own, but we track and surface it so
+          * operators can spot a degrading system before it escalates to
+          * DelayErr / COMLOST. */
+         dl->tcycl_err_cnt++;
+         if (dl->tcycl_err_cnt == 1 || (dl->tcycl_err_cnt % 100) == 0)
+         {
+            LOG_WARNING (
+               IOLINK_DL_LOG,
+               "%s: TCyclErrA on Port %d (count: %u) — possible scheduling pressure\n",
+               __func__,
+               iolink_get_portnumber (port),
+               dl->tcycl_err_cnt);
+         }
       }
    }
    
@@ -3604,6 +3613,7 @@ void iolink_dl_reset (iolink_port_t * port)
    dl->rxtimeout               = false;
    dl->devdly                  = 0;
    dl->cqerr                   = 0;
+   dl->tcycl_err_cnt           = 0;
    dl->first_read_min_cycl     = true;
 
    if (dl->timer_tcyc != NULL)

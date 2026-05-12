@@ -57,6 +57,8 @@ typedef struct iolink_14819_drv
    bool is_iolink[MAX14819_NUM_CHANNELS];
    os_mutex_t * exclusive;
 
+   uint8_t latched_reg_status;
+
    os_event_t * dl_event[MAX14819_NUM_CHANNELS];
 #ifdef __rtk__
    gpio_t pin[MAX14819_NUM_CHANNELS];
@@ -72,4 +74,5 @@ typedef struct iolink_14819_drv
 void iolink_pl_max14819_set_power(iolink_hw_drv_t * iolink_hw, uint8_t _port, bool _power, uint16_t _delay_current_limit);
 void iolink_pl_max14819_set_led(iolink_hw_drv_t * iolink_hw, uint8_t _port, bool _ledR, bool _ledG);
 void iolink_pl_max14819_get_status(iolink_hw_drv_t * iolink_hw, uint8_t _port, bool *_power, uint8_t *_baudrate, uint8_t *_error);
+uint8_t iolink_pl_max14819_get_reg_status(iolink_hw_drv_t * iolink_hw);
 #endif /* IOLINK_MAX14819_PL_H */

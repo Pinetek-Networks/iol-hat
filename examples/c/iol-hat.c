@@ -521,9 +521,166 @@ int readStatus(uint8_t _port, iol_status * status_data) {
   #endif
 
   memcpy(status_data, & buffer[2], 13);
+  status_data->error = 0;
 
   close(sock);
   return CMD_SUCCESS;
+}
+
+// ***********************************************************************************************************
+// Function to read the extended status of a specified port (includes error register)
+int readStatus2(uint8_t _port, iol_status * status_data) {
+  printf("readStatus2 called with: _port=%d\n", _port);
+
+  if (_port > 3) {
+    fprintf(stderr, "STATUS2: Port out of range");
+    return CMD_FAIL;
+  }
+
+  uint16_t tcp_port = (_port < 2) ? TCP_PORT1 : TCP_PORT2;
+  if (_port >= 2) {
+    _port -= 2;
+  }
+
+  // Command STATUS2 = 8
+  uint8_t message[2];
+  message[0] = 8; // Command ID for status2
+  message[1] = _port;
+
+  #ifdef VERBOSE
+  printf("STATUS2: Message send as bytes: ");
+  for (int i = 0; i < 2; i++) {
+    printf("%02X ", message[i]);
+  }
+  printf("\n");
+  #endif
+
+  int sock = socket(AF_INET, SOCK_STREAM, 0);
+  if (sock < 0) {
+    perror("Socket creation error");
+    return CMD_FAIL;
+  }
+
+  struct sockaddr_in server_addr;
+  server_addr.sin_family = AF_INET;
+  server_addr.sin_port = htons(tcp_port);
+  if (inet_pton(AF_INET, TCP_IP, & server_addr.sin_addr) <= 0) {
+    perror("Invalid address");
+    close(sock);
+    return CMD_FAIL;
+  }
+
+  if (connect(sock, (struct sockaddr * ) & server_addr, sizeof(server_addr)) < 0) {
+    perror("Connection failed");
+    close(sock);
+    return CMD_FAIL;
+  }
+
+  if (send(sock, message, sizeof(message), 0) < 0) {
+    perror("Send error");
+    close(sock);
+    return CMD_FAIL;
+  }
+
+  uint8_t buffer[BUFFER_SIZE];
+  int bytes_received = recv(sock, buffer, BUFFER_SIZE, 0);
+  if (bytes_received < 0) {
+    perror("Receive error");
+    close(sock);
+    return CMD_FAIL;
+  } else if (bytes_received == 2) {
+    fprintf(stderr, "STATUS2: TCP message error: %s\n", get_error_message(buffer[1]));
+    close(sock);
+    return CMD_FAIL;
+  } else if (bytes_received != 16) {
+    fprintf(stderr, "STATUS2: unexpected response length, expected 16, got %d\n", bytes_received);
+    close(sock);
+    return CMD_FAIL;
+  }
+
+  #ifdef VERBOSE
+  printf("STATUS2: Message received as bytes: ");
+  for (int i = 0; i < bytes_received; i++) {
+    printf("%02X ", buffer[i]);
+  }
+  printf("\n");
+  #endif
+
+  memcpy(status_data, & buffer[2], 14);
+
+  close(sock);
+  return CMD_SUCCESS;
+}
+
+// ***********************************************************************************************************
+// Function to read the chip-level REG_Status from the MAX14819
+// chip: 0 = TCP_PORT1 (ports 0-1), 1 = TCP_PORT2 (ports 2-3)
+// Returns reg_status byte on success, CMD_FAIL on error
+int readStatus3(uint8_t chip) {
+  printf("readStatus3 called with: chip=%d\n", chip);
+
+  if (chip > 1) {
+    fprintf(stderr, "STATUS3: chip must be 0 or 1\n");
+    return CMD_FAIL;
+  }
+
+  uint16_t tcp_port = (chip == 0) ? TCP_PORT1 : TCP_PORT2;
+
+  // Command STATUS3 = 9, no port byte
+  uint8_t message[1];
+  message[0] = 9;
+
+  int sock = socket(AF_INET, SOCK_STREAM, 0);
+  if (sock < 0) {
+    perror("Socket creation error");
+    return CMD_FAIL;
+  }
+
+  struct sockaddr_in server_addr;
+  server_addr.sin_family = AF_INET;
+  server_addr.sin_port = htons(tcp_port);
+  if (inet_pton(AF_INET, TCP_IP, & server_addr.sin_addr) <= 0) {
+    perror("Invalid address");
+    close(sock);
+    return CMD_FAIL;
+  }
+
+  if (connect(sock, (struct sockaddr * ) & server_addr, sizeof(server_addr)) < 0) {
+    perror("Connection failed");
+    close(sock);
+    return CMD_FAIL;
+  }
+
+  if (send(sock, message, sizeof(message), 0) < 0) {
+    perror("Send error");
+    close(sock);
+    return CMD_FAIL;
+  }
+
+  uint8_t buffer[BUFFER_SIZE];
+  int bytes_received = recv(sock, buffer, BUFFER_SIZE, 0);
+  if (bytes_received < 0) {
+    perror("Receive error");
+    close(sock);
+    return CMD_FAIL;
+  } else if (bytes_received != 2) {
+    fprintf(stderr, "STATUS3: unexpected response length, expected 2, got %d\n", bytes_received);
+    close(sock);
+    return CMD_FAIL;
+  }
+
+  if (buffer[0] == 0xFF) {
+    fprintf(stderr, "STATUS3: TCP message error: %s\n", get_error_message(buffer[1]));
+    close(sock);
+    return CMD_FAIL;
+  }
+
+  #ifdef VERBOSE
+  printf("STATUS3: reg_status=0x%02X\n", buffer[1]);
+  #endif
+
+  close(sock);
+  return (int) buffer[1];
 }
 
 // ***********************************************************************************************************
@@ -531,14 +688,17 @@ int readStatus(uint8_t _port, iol_status * status_data) {
 
 // Function to print the iolStatus structure
 void printStatus(const iol_status * status) {
-  printf("IOL Status:");
-  printf("pdInValid: %d\n", status -> pdInValid);
-  printf("pdOutValid: %d\n", status -> pdOutValid);
+  printf("IOL Status:\n");
+  printf("pdInValid:        %d\n", status -> pdInValid);
+  printf("pdOutValid:       %d\n", status -> pdOutValid);
   printf("transmissionRate: %d\n", status -> transmissionRate);
-  printf("masterCycleTime: %d\n", status -> masterCycleTime);
-  printf("pdInLength: %d\n", status -> pdInLength);
-  printf("pdOutLength: %d\n", status -> pdOutLength);
-  printf("vendorId: %d\n", status -> vendorId);
-  printf("deviceId: %u\n", status -> deviceId);
-  printf("power: %d\n", status -> power);
+  printf("masterCycleTime:  %d\n", status -> masterCycleTime);
+  printf("pdInLength:       %d\n", status -> pdInLength);
+  printf("pdOutLength:      %d\n", status -> pdOutLength);
+  printf("vendorId:         0x%04X\n", status -> vendorId);
+  printf("deviceId:         0x%08X\n", status -> deviceId);
+  printf("power:            %d\n", status -> power);
+  if (status -> error) {
+    printf("error:            0x%02X\n", status -> error);
+  }
 }
